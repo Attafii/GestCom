@@ -45,10 +45,14 @@ class TreatmentRepository {
   // Add new treatment
   Future<void> addTreatment(Treatment treatment) async {
     // Check if name already exists
-    final existingTreatment = _box.values.firstWhere(
-      (t) => t.name.toLowerCase() == treatment.name.toLowerCase(),
-      orElse: () => null as Treatment,
-    );
+    Treatment? existingTreatment;
+    try {
+      existingTreatment = _box.values.firstWhere(
+        (t) => t.name.toLowerCase() == treatment.name.toLowerCase(),
+      );
+    } catch (e) {
+      existingTreatment = null;
+    }
     
     if (existingTreatment != null) {
       throw Exception('Un traitement avec ce nom existe déjà');
@@ -64,10 +68,14 @@ class TreatmentRepository {
     }
 
     // Check if name already exists for another treatment
-    final existingTreatment = _box.values.firstWhere(
-      (t) => t.name.toLowerCase() == treatment.name.toLowerCase() && t.id != treatment.id,
-      orElse: () => null as Treatment,
-    );
+    Treatment? existingTreatment;
+    try {
+      existingTreatment = _box.values.firstWhere(
+        (t) => t.name.toLowerCase() == treatment.name.toLowerCase() && t.id != treatment.id,
+      );
+    } catch (e) {
+      existingTreatment = null;
+    }
     
     if (existingTreatment != null) {
       throw Exception('Un traitement avec ce nom existe déjà');

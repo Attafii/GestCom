@@ -34,10 +34,13 @@ class ArticleRepository {
 
   // Get article by reference
   Article? getArticleByReference(String reference) {
-    return _box.values.firstWhere(
-      (article) => article.reference == reference,
-      orElse: () => null as Article,
-    );
+    try {
+      return _box.values.firstWhere(
+        (article) => article.reference == reference,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   // Search articles
@@ -84,10 +87,14 @@ class ArticleRepository {
     }
 
     // Check if reference already exists for another article
-    final existingArticle = _box.values.firstWhere(
-      (a) => a.reference == article.reference && a.id != article.id,
-      orElse: () => null as Article,
-    );
+    Article? existingArticle;
+    try {
+      existingArticle = _box.values.firstWhere(
+        (a) => a.reference == article.reference && a.id != article.id,
+      );
+    } catch (e) {
+      existingArticle = null;
+    }
     
     if (existingArticle != null) {
       throw Exception('Un article avec cette référence existe déjà');

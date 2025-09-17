@@ -10,6 +10,9 @@ import 'data/models/article_model.dart';
 import 'data/models/treatment_model.dart';
 import 'data/models/bon_reception_model.dart';
 import 'data/models/article_reception_model.dart';
+import 'data/models/bon_livraison_model.dart';
+import 'data/models/article_livraison_model.dart';
+import 'data/models/facturation_model.dart';
 import 'core/services/initialization_service.dart';
 
 void main() async {
@@ -47,12 +50,18 @@ Future<void> _initializeHive() async {
   Hive.registerAdapter(TreatmentAdapter());
   Hive.registerAdapter(BonReceptionAdapter());
   Hive.registerAdapter(ArticleReceptionAdapter());
+  Hive.registerAdapter(BonLivraisonAdapter());
+  Hive.registerAdapter(ArticleLivraisonAdapter());
+  Hive.registerAdapter(FacturationAdapter());
   
   // Open boxes
   await Hive.openBox<Client>('clients');
   await Hive.openBox<Article>('articles');
   await Hive.openBox<Treatment>('treatments');
   await Hive.openBox<BonReception>('bon_receptions');
+  await Hive.openBox<BonLivraison>('bon_livraison');
+  await Hive.openBox<Facturation>('facturations');
+  await Hive.openBox('app_settings'); // For theme preferences
   
   debugPrint('Hive initialized successfully at: ${hiveDir.path}');
 }

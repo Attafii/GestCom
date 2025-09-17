@@ -53,10 +53,13 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
     // Load client data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final clients = ref.read(activeClientsProvider);
-      _selectedClient = clients.firstWhere(
-        (client) => client.id == reception.clientId,
-        orElse: () => null!,
-      );
+      try {
+        _selectedClient = clients.firstWhere(
+          (client) => client.id == reception.clientId,
+        );
+      } catch (e) {
+        _selectedClient = null;
+      }
       setState(() {});
     });
   }
@@ -640,10 +643,13 @@ class _ArticleSelectionDialogState extends State<_ArticleSelectionDialog> {
       _priceController.text = initial.unitPrice.toString();
       
       // Find the article
-      _selectedArticle = widget.articles.firstWhere(
-        (article) => article.reference == initial.articleReference,
-        orElse: () => null!,
-      );
+      try {
+        _selectedArticle = widget.articles.firstWhere(
+          (article) => article.reference == initial.articleReference,
+        );
+      } catch (e) {
+        _selectedArticle = null;
+      }
     }
   }
 

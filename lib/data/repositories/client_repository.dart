@@ -37,10 +37,14 @@ class ClientRepository {
   // Add new client
   Future<void> addClient(Client client) async {
     // Check if matricule fiscal already exists
-    final existingClient = _box.values.firstWhere(
-      (c) => c.matriculeFiscal == client.matriculeFiscal,
-      orElse: () => null as Client,
-    );
+    Client? existingClient;
+    try {
+      existingClient = _box.values.firstWhere(
+        (c) => c.matriculeFiscal == client.matriculeFiscal,
+      );
+    } catch (e) {
+      existingClient = null;
+    }
     
     if (existingClient != null) {
       throw Exception('Un client avec ce matricule fiscal existe déjà');
@@ -56,10 +60,14 @@ class ClientRepository {
     }
 
     // Check if matricule fiscal already exists for another client
-    final existingClient = _box.values.firstWhere(
-      (c) => c.matriculeFiscal == client.matriculeFiscal && c.id != client.id,
-      orElse: () => null as Client,
-    );
+    Client? existingClient;
+    try {
+      existingClient = _box.values.firstWhere(
+        (c) => c.matriculeFiscal == client.matriculeFiscal && c.id != client.id,
+      );
+    } catch (e) {
+      existingClient = null;
+    }
     
     if (existingClient != null) {
       throw Exception('Un client avec ce matricule fiscal existe déjà');

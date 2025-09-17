@@ -1,0 +1,188 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/constants/app_colors.dart';
+import '../core/constants/app_strings.dart';
+import '../core/theme/app_theme.dart';
+import '../core/providers/theme_provider.dart';
+import '../core/widgets/app_navigation.dart';
+import '../features/dashboard/dashboard_screen.dart';
+import '../features/tasks/task_list_screen.dart';
+import '../features/settings/notification_settings_screen.dart';
+import '../features/home/presentation/screens/home_screen.dart';
+
+class GestComApp extends ConsumerWidget {
+  const GestComApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final lightTheme = ref.watch(lightThemeProvider);
+    final darkTheme = ref.watch(darkThemeProvider);
+
+    return MaterialApp(
+      title: AppStrings.appName,
+      debugShowCheckedModeBanner: false,
+      
+      // Material 3 theming
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
+      
+      // Home screen with new navigation
+      home: const MainScreen(),
+      
+      // Routes for both old and new navigation
+      routes: {
+        '/home': (context) => const HomeScreen(),
+        '/dashboard': (context) => const DashboardScreen(),
+        '/tasks': (context) => const TaskListScreen(),
+        '/clients': (context) => const PlaceholderScreen(title: 'Clients'),
+        '/articles': (context) => const PlaceholderScreen(title: 'Articles'),
+        '/bon-reception': (context) => const PlaceholderScreen(title: 'Bon de Réception'),
+        '/bon-livraison': (context) => const PlaceholderScreen(title: 'Bon de Livraison'),
+        '/factures': (context) => const PlaceholderScreen(title: 'Factures'),
+        '/notifications': (context) => const PlaceholderScreen(title: 'Notifications'),
+        '/settings': (context) => const NotificationSettingsScreen(),
+      },
+    );
+  }
+}
+
+class MainScreen extends ConsumerStatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  ConsumerState<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends ConsumerState<MainScreen> {
+  Widget _currentScreen = const DashboardScreen();
+
+  void _handleNavigation(String route) {
+    setState(() {
+      switch (route) {
+        case '/dashboard':
+          _currentScreen = const DashboardScreen();
+          break;
+        case '/tasks':
+          _currentScreen = const TaskListScreen();
+          break;
+        case '/clients':
+          _currentScreen = const PlaceholderScreen(title: 'Clients');
+          break;
+        case '/articles':
+          _currentScreen = const PlaceholderScreen(title: 'Articles');
+          break;
+        case '/bon-reception':
+          _currentScreen = const PlaceholderScreen(title: 'Bon de Réception');
+          break;
+        case '/bon-livraison':
+          _currentScreen = const PlaceholderScreen(title: 'Bon de Livraison');
+          break;
+        case '/factures':
+          _currentScreen = const PlaceholderScreen(title: 'Factures');
+          break;
+        case '/notifications':
+          _currentScreen = const PlaceholderScreen(title: 'Notifications');
+          break;
+        case '/settings':
+          _currentScreen = const NotificationSettingsScreen();
+          break;
+        case '/home':
+          _currentScreen = const HomeScreen();
+          break;
+        default:
+          _currentScreen = const DashboardScreen();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveNavigation(
+      onNavigate: _handleNavigation,
+      child: _currentScreen,
+    );
+  }
+}
+
+// Placeholder screen for routes not yet implemented
+class PlaceholderScreen extends StatelessWidget {
+  final String title;
+
+  const PlaceholderScreen({
+    super.key,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushReplacementNamed('/home');
+            },
+            icon: const Icon(Icons.home),
+            label: const Text('Legacy View'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction,
+              size: 64,
+              color: theme.colorScheme.primary.withOpacity(0.6),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This screen features the new Material 3 design',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushReplacementNamed('/dashboard');
+                  },
+                  icon: const Icon(Icons.dashboard),
+                  label: const Text('Dashboard'),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushReplacementNamed('/home');
+                  },
+                  icon: const Icon(Icons.home),
+                  label: const Text('Legacy Home'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

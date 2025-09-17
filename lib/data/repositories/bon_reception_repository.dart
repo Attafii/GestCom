@@ -105,10 +105,14 @@ class BonReceptionRepository {
     }
 
     // Check if commande number already exists for another reception
-    final existingReception = _box.values.firstWhere(
-      (r) => r.commandeNumber == reception.commandeNumber && r.id != reception.id,
-      orElse: () => null!,
-    );
+    BonReception? existingReception;
+    try {
+      existingReception = _box.values.firstWhere(
+        (r) => r.commandeNumber == reception.commandeNumber && r.id != reception.id,
+      );
+    } catch (e) {
+      existingReception = null;
+    }
     
     if (existingReception != null) {
       throw Exception('Un bon de réception avec ce numéro de commande existe déjà');

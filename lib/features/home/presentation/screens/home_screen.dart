@@ -6,6 +6,9 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../client/presentation/screens/client_screen.dart';
 import '../../../articles/presentation/screens/article_screen.dart';
 import '../../../reception/presentation/screens/reception_screen.dart';
+import '../../../livraison/presentation/screens/livraison_screen.dart';
+import '../../../facturation/presentation/screens/facturation_screen.dart';
+import '../../../inventaire/screens/inventory_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../navigation/presentation/widgets/app_navigation_drawer.dart';
 
@@ -125,11 +128,11 @@ class HomeScreen extends ConsumerWidget {
       case 3:
         return const ReceptionScreen();
       case 4:
-        return const _PlaceholderPage(title: AppStrings.menuLivraison);
+        return const LivraisonScreen();
       case 5:
-        return const _PlaceholderPage(title: AppStrings.menuFacturation);
+        return const FacturationScreen();
       case 6:
-        return const _PlaceholderPage(title: AppStrings.menuInventaire);
+        return const InventoryScreen();
       case 7:
         return const _PlaceholderPage(title: AppStrings.menuEncaissements);
       case 8:
