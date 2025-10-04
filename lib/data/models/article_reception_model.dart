@@ -16,11 +16,19 @@ class ArticleReception extends HiveObject {
   @HiveField(3)
   final String articleDesignation;
 
+  @HiveField(4)
+  final String? treatmentId;
+
+  @HiveField(5)
+  final String? treatmentName;
+
   ArticleReception({
     required this.articleReference,
     required this.quantity,
     required this.unitPrice,
     required this.articleDesignation,
+    this.treatmentId,
+    this.treatmentName,
   });
 
   // Calculate total price for this article line
@@ -32,12 +40,16 @@ class ArticleReception extends HiveObject {
     int? quantity,
     double? unitPrice,
     String? articleDesignation,
+    String? treatmentId,
+    String? treatmentName,
   }) {
     return ArticleReception(
       articleReference: articleReference ?? this.articleReference,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       articleDesignation: articleDesignation ?? this.articleDesignation,
+      treatmentId: treatmentId ?? this.treatmentId,
+      treatmentName: treatmentName ?? this.treatmentName,
     );
   }
 
@@ -49,7 +61,9 @@ class ArticleReception extends HiveObject {
         other.articleReference == articleReference &&
         other.quantity == quantity &&
         other.unitPrice == unitPrice &&
-        other.articleDesignation == articleDesignation;
+        other.articleDesignation == articleDesignation &&
+        other.treatmentId == treatmentId &&
+        other.treatmentName == treatmentName;
   }
 
   @override
@@ -57,7 +71,9 @@ class ArticleReception extends HiveObject {
     return articleReference.hashCode ^
         quantity.hashCode ^
         unitPrice.hashCode ^
-        articleDesignation.hashCode;
+        articleDesignation.hashCode ^
+        treatmentId.hashCode ^
+        treatmentName.hashCode;
   }
 
   // To JSON for export
@@ -67,6 +83,8 @@ class ArticleReception extends HiveObject {
       'quantity': quantity,
       'unitPrice': unitPrice,
       'articleDesignation': articleDesignation,
+      'treatmentId': treatmentId,
+      'treatmentName': treatmentName,
       'totalPrice': totalPrice,
     };
   }
@@ -78,6 +96,8 @@ class ArticleReception extends HiveObject {
       quantity: json['quantity'] as int,
       unitPrice: (json['unitPrice'] as num).toDouble(),
       articleDesignation: json['articleDesignation'] as String,
+      treatmentId: json['treatmentId'] as String?,
+      treatmentName: json['treatmentName'] as String?,
     );
   }
 

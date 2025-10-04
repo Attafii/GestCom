@@ -26,6 +26,10 @@ class Article extends HiveObject {
   @HiveField(6)
   final DateTime updatedAt;
 
+  /// Optional client ID - links article to a specific client
+  @HiveField(7)
+  final String? clientId;
+
   Article({
     String? id,
     required this.reference,
@@ -34,6 +38,7 @@ class Article extends HiveObject {
     this.isActive = true,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.clientId,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -44,6 +49,7 @@ class Article extends HiveObject {
     String? designation,
     Map<String, double>? traitementPrix,
     bool? isActive,
+    String? clientId,
   }) {
     return Article(
       id: id,
@@ -53,6 +59,7 @@ class Article extends HiveObject {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      clientId: clientId ?? this.clientId,
     );
   }
 
@@ -93,6 +100,7 @@ class Article extends HiveObject {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'clientId': clientId,
     };
   }
 
@@ -105,6 +113,7 @@ class Article extends HiveObject {
       isActive: json['isActive'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      clientId: json['clientId'],
     );
   }
 

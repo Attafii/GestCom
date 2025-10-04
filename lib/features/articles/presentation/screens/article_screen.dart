@@ -5,9 +5,11 @@ import 'package:data_table_2/data_table_2.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../data/models/article_model.dart';
+import '../../../../data/models/client_model.dart';
 import '../../../../data/models/treatment_model.dart';
 import '../../application/article_providers.dart';
 import '../../application/treatment_providers.dart';
+import '../../../client/application/client_providers.dart';
 import '../widgets/article_form_dialog.dart';
 
 class ArticleScreen extends ConsumerStatefulWidget {
@@ -30,7 +32,9 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
   Widget build(BuildContext context) {
     final articles = ref.watch(articleListProvider);
     final treatments = ref.watch(activeTreatmentsProvider);
+    final clients = ref.watch(clientListProvider);
     final activeFilter = ref.watch(articleActiveFilterProvider);
+    final clientFilter = ref.watch(articleClientFilterProvider);
     final searchQuery = ref.watch(articleSearchQueryProvider);
 
     return Scaffold(
@@ -45,7 +49,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
             const SizedBox(height: 24),
 
             // Search and filters
-            _buildSearchAndFilters(context, activeFilter),
+            _buildSearchAndFilters(context, activeFilter, clientFilter, clients),
             const SizedBox(height: 24),
 
             // Data table
@@ -58,12 +62,12 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Table header
-                      _buildTableHeader(articles, activeFilter),
+                      _buildTableHeader(articles, activeFilter, clientFilter, clients),
                       const SizedBox(height: 16),
 
                       // Data table
                       Expanded(
-                        child: _buildDataTable(context, articles, treatments),
+                        child: _buildDataTable(context, articles, treatments, clients),
                       ),
                     ],
                   ),
@@ -112,7 +116,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     );
   }
 
-  Widget _buildSearchAndFilters(BuildContext context, bool? activeFilter) {
+  Widget _buildSearchAndFilters(BuildContext context, bool? activeFilter, String? clientFilter, List<Client> clients) {
     return Row(
       children: [
         Expanded(
@@ -180,18 +184,70 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
             },
           ),
         ),
+        const SizedBox(width: 16),
+        
+        // Client filter
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.divider),
+            borderRadius: BorderRadius.circular(8),
+            color: AppColors.surface,
+          ),
+          child: DropdownButton<String?>(
+            value: clientFilter,
+            hint: const Text('Client'),
+            underline: const SizedBox(),
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('Tous les clients'),
+              ),
+              const DropdownMenuItem<String?>(
+                value: 'general',
+                child: Text('Articles généraux'),
+              ),
+              ...clients.map((client) => DropdownMenuItem<String?>(
+                value: client.id,
+                child: Text(client.name),
+              )),
+            ],
+            onChanged: (value) {
+              ref.read(articleClientFilterProvider.notifier).setFilter(value);
+            },
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildTableHeader(List<Article> articles, bool? activeFilter) {
+  Widget _buildTableHeader(List<Article> articles, bool? activeFilter, String? clientFilter, List<Client> clients) {
     String countText;
-    if (activeFilter == null) {
+    final filters = <String>[];
+    
+    if (activeFilter == true) {
+      filters.add('actif(s)');
+    } else if (activeFilter == false) {
+      filters.add('inactif(s)');
+    }
+    
+    if (clientFilter != null) {
+      if (clientFilter == 'general') {
+        filters.add('généraux');
+      } else {
+        try {
+          final client = clients.firstWhere((c) => c.id == clientFilter);
+          filters.add('pour ${client.name}');
+        } catch (e) {
+          // Client not found, skip adding filter text
+        }
+      }
+    }
+    
+    if (filters.isEmpty) {
       countText = '${articles.length} article(s)';
-    } else if (activeFilter) {
-      countText = '${articles.length} article(s) actif(s)';
     } else {
-      countText = '${articles.length} article(s) inactif(s)';
+      countText = '${articles.length} article(s) ${filters.join(', ')}';
     }
 
     return Row(
@@ -214,7 +270,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     );
   }
 
-  Widget _buildDataTable(BuildContext context, List<Article> articles, List<Treatment> treatments) {
+  Widget _buildDataTable(BuildContext context, List<Article> articles, List<Treatment> treatments, List<Client> clients) {
     if (articles.isEmpty) {
       return Center(
         child: Column(
@@ -247,7 +303,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     return DataTable2(
       columnSpacing: 12,
       horizontalMargin: 12,
-      minWidth: 900,
+      minWidth: 1000,
       headingRowColor: MaterialStateProperty.all(AppColors.tableHeader),
       dataRowColor: MaterialStateProperty.resolveWith((states) {
         if (states.contains(MaterialState.selected)) {
@@ -263,6 +319,10 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
         DataColumn2(
           label: Text('Désignation', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.L,
+        ),
+        DataColumn2(
+          label: Text('Client', style: TextStyle(fontWeight: FontWeight.bold)),
+          size: ColumnSize.M,
         ),
         DataColumn2(
           label: Text('Traitements', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -295,6 +355,9 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
               ),
             ),
             DataCell(
+              _buildClientCell(article, clients),
+            ),
+            DataCell(
               _buildTreatmentsList(article, treatments),
             ),
             DataCell(
@@ -307,6 +370,45 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
         );
       }).toList(),
     );
+  }
+
+  Widget _buildClientCell(Article article, List<Client> clients) {
+    if (article.clientId == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.textSecondary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          'Général',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    try {
+      final client = clients.firstWhere(
+        (c) => c.id == article.clientId,
+      );
+      
+      return Text(
+        client.name,
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      );
+    } catch (e) {
+      return Text(
+        'Client inconnu',
+        style: TextStyle(
+          color: AppColors.error,
+          fontSize: 12,
+        ),
+      );
+    }
   }
 
   Widget _buildTreatmentsList(Article article, List<Treatment> treatments) {
@@ -322,10 +424,27 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
 
     final treatmentWidgets = <Widget>[];
     for (final treatmentId in article.treatmentIds) {
-      final treatment = treatments.firstWhere(
-        (t) => t.id == treatmentId,
-        orElse: () => Treatment(name: 'Inconnu', description: '', defaultPrice: 0),
-      );
+      String treatmentName;
+      
+      // Check if it's a custom treatment (starts with 'custom_')
+      if (treatmentId.startsWith('custom_')) {
+        // Extract the name from the custom ID (format: custom_timestamp_name_with_underscores)
+        final parts = treatmentId.split('_');
+        if (parts.length > 2) {
+          // Join all parts after 'custom_timestamp' to get the full name and replace underscores with spaces
+          treatmentName = parts.sublist(2).join('_').replaceAll('_', ' ');
+        } else {
+          treatmentName = 'Traitement personnalisé';
+        }
+      } else {
+        // Try to find the treatment in the treatments list
+        final treatment = treatments.firstWhere(
+          (t) => t.id == treatmentId,
+          orElse: () => Treatment(name: 'Inconnu', description: '', defaultPrice: 0),
+        );
+        treatmentName = treatment.name;
+      }
+      
       final price = article.getPriceForTreatment(treatmentId) ?? 0;
 
       treatmentWidgets.add(
@@ -338,7 +457,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
             border: Border.all(color: AppColors.primary.withOpacity(0.3)),
           ),
           child: Text(
-            '${treatment.name}: ${price.toStringAsFixed(2)} DT',
+            '$treatmentName: ${price.toStringAsFixed(2)} DT',
             style: TextStyle(
               fontSize: 11,
               color: AppColors.primary,

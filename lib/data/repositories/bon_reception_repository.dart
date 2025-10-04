@@ -21,12 +21,13 @@ class BonReceptionRepository {
       ..sort((a, b) => b.dateReception.compareTo(a.dateReception));
   }
 
-  // Get receptions by status
-  List<BonReception> getReceptionsByStatus(String status) {
-    return _box.values
-        .where((reception) => reception.status == status)
-        .toList()
-      ..sort((a, b) => b.dateReception.compareTo(a.dateReception));
+  // Get reception by BR number
+  BonReception? getReceptionByBRNumber(String numeroBR) {
+    try {
+      return _box.values.firstWhere((reception) => reception.numeroBR == numeroBR);
+    } catch (e) {
+      return null;
+    }
   }
 
   // Get receptions by date range
@@ -68,6 +69,7 @@ class BonReceptionRepository {
       if (clientId != null && reception.clientId != clientId) return false;
       
       return reception.commandeNumber.toLowerCase().contains(lowercaseQuery) ||
+             reception.numeroBR.toLowerCase().contains(lowercaseQuery) ||
              reception.notes?.toLowerCase().contains(lowercaseQuery) == true ||
              reception.articles.any((article) => 
                  article.articleReference.toLowerCase().contains(lowercaseQuery) ||
@@ -131,20 +133,6 @@ class BonReceptionRepository {
     await _box.delete(id);
   }
 
-  // Update reception status
-  Future<void> updateReceptionStatus(String id, String status) async {
-    final reception = _box.get(id);
-    if (reception == null) {
-      throw Exception('Bon de réception non trouvé');
-    }
-
-    final updatedReception = reception.copyWith(
-      status: status,
-      updatedAt: DateTime.now(),
-    );
-    await _box.put(id, updatedReception);
-  }
-
   // Check if commande number exists
   bool commandeNumberExists(String commandeNumber, {String? excludeId}) {
     return _box.values.any((reception) => 
@@ -156,11 +144,6 @@ class BonReceptionRepository {
   // Get receptions count
   int getReceptionsCount() {
     return _box.length;
-  }
-
-  // Get receptions count by status
-  int getReceptionsCountByStatus(String status) {
-    return _box.values.where((reception) => reception.status == status).length;
   }
 
   // Get receptions count by client
@@ -180,13 +163,6 @@ class BonReceptionRepository {
         .fold(0.0, (sum, reception) => sum + reception.totalAmount);
   }
 
-  // Get total amount by status
-  double getTotalAmountByStatus(String status) {
-    return _box.values
-        .where((reception) => reception.status == status)
-        .fold(0.0, (sum, reception) => sum + reception.totalAmount);
-  }
-
   // Get statistics by date range
   Map<String, dynamic> getStatisticsByDateRange(DateTime startDate, DateTime endDate) {
     final receptions = getReceptionsByDateRange(startDate, endDate);
@@ -197,11 +173,6 @@ class BonReceptionRepository {
       'totalQuantity': receptions.fold(0, (sum, r) => sum + r.totalQuantity),
       'avgAmount': receptions.isEmpty ? 0.0 : 
           receptions.fold(0.0, (sum, r) => sum + r.totalAmount) / receptions.length,
-      'byStatus': {
-        'en_attente': receptions.where((r) => r.status == 'en_attente').length,
-        'valide': receptions.where((r) => r.status == 'valide').length,
-        'annule': receptions.where((r) => r.status == 'annule').length,
-      },
     };
   }
 

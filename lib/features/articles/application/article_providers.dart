@@ -66,18 +66,30 @@ class ArticleList extends _$ArticleList {
   }
 
   // Search articles
-  void searchArticles(String query, {bool? activeOnly}) {
+  void searchArticles(String query, {bool? activeOnly, String? clientId}) {
     final repository = ref.read(articleRepositoryProvider);
-    state = repository.searchArticles(query, activeOnly: activeOnly);
+    state = repository.searchArticles(query, activeOnly: activeOnly, clientId: clientId);
   }
 
   // Filter by status
-  void filterByStatus(bool? isActive) {
+  void filterByStatus(bool? isActive, {String? clientId}) {
     final repository = ref.read(articleRepositoryProvider);
-    if (isActive == null) {
+    if (clientId != null) {
+      state = repository.getArticlesByClient(clientId, activeOnly: isActive);
+    } else if (isActive == null) {
       state = repository.getAllArticles();
     } else {
       state = repository.getArticlesByStatus(isActive);
+    }
+  }
+
+  // Filter by client
+  void filterByClient(String? clientId, {bool? activeOnly}) {
+    final repository = ref.read(articleRepositoryProvider);
+    if (clientId == null) {
+      state = activeOnly == true ? repository.getActiveArticles() : repository.getAllArticles();
+    } else {
+      state = repository.getArticlesByClient(clientId, activeOnly: activeOnly);
     }
   }
 
@@ -97,7 +109,12 @@ class ArticleSearchQuery extends _$ArticleSearchQuery {
   void updateQuery(String query) {
     state = query;
     final activeFilter = ref.read(articleActiveFilterProvider);
-    ref.read(articleListProvider.notifier).searchArticles(query, activeOnly: activeFilter);
+    final clientFilter = ref.read(articleClientFilterProvider);
+    ref.read(articleListProvider.notifier).searchArticles(
+      query, 
+      activeOnly: activeFilter,
+      clientId: clientFilter,
+    );
   }
 
   void clear() {
@@ -115,16 +132,53 @@ class ArticleActiveFilter extends _$ArticleActiveFilter {
   void setFilter(bool? isActive) {
     state = isActive;
     final query = ref.read(articleSearchQueryProvider);
+    final clientFilter = ref.read(articleClientFilterProvider);
     if (query.isNotEmpty) {
-      ref.read(articleListProvider.notifier).searchArticles(query, activeOnly: isActive);
+      ref.read(articleListProvider.notifier).searchArticles(
+        query, 
+        activeOnly: isActive,
+        clientId: clientFilter,
+      );
     } else {
-      ref.read(articleListProvider.notifier).filterByStatus(isActive);
+      ref.read(articleListProvider.notifier).filterByStatus(isActive, clientId: clientFilter);
     }
   }
 
   void clearFilter() {
     state = null;
     ref.read(articleListProvider.notifier).refresh();
+  }
+}
+
+// Client filter provider
+@riverpod
+class ArticleClientFilter extends _$ArticleClientFilter {
+  @override
+  String? build() => null; // null = all clients
+
+  void setFilter(String? clientId) {
+    state = clientId;
+    final query = ref.read(articleSearchQueryProvider);
+    final activeFilter = ref.read(articleActiveFilterProvider);
+    
+    // Handle special "general" value for general articles (clientId = null)
+    final actualClientId = clientId == 'general' ? null : clientId;
+    
+    if (query.isNotEmpty) {
+      ref.read(articleListProvider.notifier).searchArticles(
+        query,
+        activeOnly: activeFilter,
+        clientId: actualClientId,
+      );
+    } else {
+      ref.read(articleListProvider.notifier).filterByClient(actualClientId, activeOnly: activeFilter);
+    }
+  }
+
+  void clearFilter() {
+    state = null;
+    final activeFilter = ref.read(articleActiveFilterProvider);
+    ref.read(articleListProvider.notifier).filterByStatus(activeFilter);
   }
 }
 

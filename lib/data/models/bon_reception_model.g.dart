@@ -24,8 +24,8 @@ class BonReceptionAdapter extends TypeAdapter<BonReception> {
       articles: (fields[4] as List).cast<ArticleReception>(),
       createdAt: fields[5] as DateTime?,
       updatedAt: fields[6] as DateTime?,
-      status: fields[7] as String,
       notes: fields[8] as String?,
+      numeroBR: fields[9] as String,
     );
   }
 
@@ -47,10 +47,10 @@ class BonReceptionAdapter extends TypeAdapter<BonReception> {
       ..write(obj.createdAt)
       ..writeByte(6)
       ..write(obj.updatedAt)
-      ..writeByte(7)
-      ..write(obj.status)
       ..writeByte(8)
-      ..write(obj.notes);
+      ..write(obj.notes)
+      ..writeByte(9)
+      ..write(obj.numeroBR);
   }
 
   @override

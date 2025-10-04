@@ -24,6 +24,24 @@ class ArticleRepository {
       ..sort((a, b) => a.reference.compareTo(b.reference));
   }
 
+  // Get articles by client ID
+  List<Article> getArticlesByClient(String clientId, {bool? activeOnly}) {
+    return _box.values.where((article) {
+      if (activeOnly == true && !article.isActive) return false;
+      return article.clientId == clientId;
+    }).toList()
+      ..sort((a, b) => a.reference.compareTo(b.reference));
+  }
+
+  // Get articles without client (general articles)
+  List<Article> getGeneralArticles({bool? activeOnly}) {
+    return _box.values.where((article) {
+      if (activeOnly == true && !article.isActive) return false;
+      return article.clientId == null;
+    }).toList()
+      ..sort((a, b) => a.reference.compareTo(b.reference));
+  }
+
   // Get article by ID
   Article? getArticleById(String id) {
     return _box.values.firstWhere(
@@ -44,14 +62,18 @@ class ArticleRepository {
   }
 
   // Search articles
-  List<Article> searchArticles(String query, {bool? activeOnly}) {
-    if (query.isEmpty) {
+  List<Article> searchArticles(String query, {bool? activeOnly, String? clientId}) {
+    if (query.isEmpty && clientId == null) {
       return activeOnly == true ? getActiveArticles() : getAllArticles();
     }
     
     final lowercaseQuery = query.toLowerCase();
     var articles = _box.values.where((article) {
       if (activeOnly == true && !article.isActive) return false;
+      if (clientId != null && article.clientId != clientId) return false;
+      
+      if (query.isEmpty) return true;
+      
       return article.reference.toLowerCase().contains(lowercaseQuery) ||
              article.designation.toLowerCase().contains(lowercaseQuery);
     }).toList();

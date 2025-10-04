@@ -300,13 +300,15 @@ class GeneralSettingsAdapter extends TypeAdapter<GeneralSettings> {
       startWithSystem: fields[5] as bool,
       minimizeToTray: fields[6] as bool,
       defaultPageSize: fields[7] as int,
+      currency: fields[8] as String,
+      eurToTndRate: fields[9] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, GeneralSettings obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.autoSave)
       ..writeByte(1)
@@ -322,7 +324,11 @@ class GeneralSettingsAdapter extends TypeAdapter<GeneralSettings> {
       ..writeByte(6)
       ..write(obj.minimizeToTray)
       ..writeByte(7)
-      ..write(obj.defaultPageSize);
+      ..write(obj.defaultPageSize)
+      ..writeByte(8)
+      ..write(obj.currency)
+      ..writeByte(9)
+      ..write(obj.eurToTndRate);
   }
 
   @override

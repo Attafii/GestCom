@@ -70,7 +70,7 @@ final articleStatsByTreatmentProvider =
 );
 
 typedef ArticleStatsByTreatmentRef = AutoDisposeProviderRef<Map<String, int>>;
-String _$articleListHash() => r'b425ffc1b8ba61ee91761d84183413f611e50f39';
+String _$articleListHash() => r'430534c9613779e361bbe2f6a0a2c63ee97bb9c2';
 
 /// See also [ArticleList].
 @ProviderFor(ArticleList)
@@ -86,7 +86,7 @@ final articleListProvider =
 
 typedef _$ArticleList = AutoDisposeNotifier<List<Article>>;
 String _$articleSearchQueryHash() =>
-    r'9efca1ec6e4da3566bd8a7264ff6e7a0eec9828c';
+    r'67014fd809dcff4b6f3972cc40d257db7a2786e0';
 
 /// See also [ArticleSearchQuery].
 @ProviderFor(ArticleSearchQuery)
@@ -103,7 +103,7 @@ final articleSearchQueryProvider =
 
 typedef _$ArticleSearchQuery = AutoDisposeNotifier<String>;
 String _$articleActiveFilterHash() =>
-    r'22a409aadfcff6b9b396b51154a72a276b24d3fd';
+    r'7a5a8cfffd411a0f829d8e48e8b84d681da34fa1';
 
 /// See also [ArticleActiveFilter].
 @ProviderFor(ArticleActiveFilter)
@@ -119,6 +119,23 @@ final articleActiveFilterProvider =
 );
 
 typedef _$ArticleActiveFilter = AutoDisposeNotifier<bool?>;
+String _$articleClientFilterHash() =>
+    r'5e7514e0a247e3b0aae31899109be4a9d031b4d2';
+
+/// See also [ArticleClientFilter].
+@ProviderFor(ArticleClientFilter)
+final articleClientFilterProvider =
+    AutoDisposeNotifierProvider<ArticleClientFilter, String?>.internal(
+  ArticleClientFilter.new,
+  name: r'articleClientFilterProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$articleClientFilterHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$ArticleClientFilter = AutoDisposeNotifier<String?>;
 String _$selectedArticleHash() => r'0982cfc9ab11de72631b21297506975eeb86ed70';
 
 /// See also [SelectedArticle].

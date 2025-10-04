@@ -14,6 +14,9 @@ class Treatment extends HiveObject {
   @HiveField(2)
   final String description;
   
+  /// Default price in EUR (Euro)
+  /// All treatment prices are stored in EUR by default
+  /// Convert to TND using company currency settings when displaying
   @HiveField(3)
   final double defaultPrice;
   

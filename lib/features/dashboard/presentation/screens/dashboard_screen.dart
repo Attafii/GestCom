@@ -136,9 +136,9 @@ class DashboardScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            title: 'TVA',
-            value: '${NumberFormat('#,##0').format((totalAmount * 0.2).toInt())} €',
-            subtitle: 'CA par mode de paiement',
+            title: 'Total HT',
+            value: '${NumberFormat('#,##0').format(totalAmount.toInt())} DT',
+            subtitle: 'Chiffre d\'affaires HT',
             icon: Icons.receipt,
             color: const Color(0xFF8B5CF6),
             percentage: 43,
@@ -147,8 +147,8 @@ class DashboardScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            title: 'Chiffre d\'affaire TTC',
-            value: '${NumberFormat('#,##0').format((totalAmount * 1.2).toInt())} €',
+            title: 'Chiffre d\'affaires HT',
+            value: '${NumberFormat('#,##0').format(totalAmount.toInt())} DT',
             subtitle: 'Tendance de ventes',
             icon: Icons.trending_up,
             color: const Color(0xFFEC4899),
@@ -664,7 +664,7 @@ class DashboardScreen extends ConsumerWidget {
             children: [
               const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
               const Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
-              const Expanded(flex: 2, child: Text('Montant TTC', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
+              const Expanded(flex: 2, child: Text('Montant HT', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
               const Expanded(flex: 1, child: Text('Etat', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
             ],
           ),
@@ -705,12 +705,12 @@ class DashboardScreen extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: reception.status == 'valide' ? Colors.green : Colors.orange,
+                        color: AppColors.success,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(
-                        reception.status == 'valide' ? 'Payé' : 'Impayé',
-                        style: const TextStyle(
+                      child: const Text(
+                        'Reçu',
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,

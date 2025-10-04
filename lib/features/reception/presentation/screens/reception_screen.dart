@@ -32,7 +32,6 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
     final receptions = ref.watch(bonReceptionListProvider);
     final clients = ref.watch(activeClientsProvider);
     final clientFilter = ref.watch(bonReceptionClientFilterProvider);
-    final statusFilter = ref.watch(bonReceptionStatusFilterProvider);
     final searchQuery = ref.watch(bonReceptionSearchQueryProvider);
 
     return Scaffold(
@@ -139,50 +138,13 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
                             },
                           ),
                         ),
-
-                        const SizedBox(width: 16),
-
-                        // Status filter
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: statusFilter,
-                            decoration: InputDecoration(
-                              labelText: 'Filtrer par statut',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                            items: const [
-                              DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('Tous les statuts'),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: 'en_attente',
-                                child: Text('En attente'),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: 'valide',
-                                child: Text('Validé'),
-                              ),
-                              DropdownMenuItem<String>(
-                                value: 'annule',
-                                child: Text('Annulé'),
-                              ),
-                            ],
-                            onChanged: (status) {
-                              ref.read(bonReceptionStatusFilterProvider.notifier).selectStatus(status);
-                            },
-                          ),
-                        ),
                       ],
                     ),
 
                     const SizedBox(height: 12),
 
                     // Clear filters button
-                    if (searchQuery.isNotEmpty || clientFilter != null || statusFilter != null)
+                    if (searchQuery.isNotEmpty || clientFilter != null)
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
@@ -190,7 +152,6 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
                             _searchController.clear();
                             ref.read(bonReceptionSearchQueryProvider.notifier).clearQuery();
                             ref.read(bonReceptionClientFilterProvider.notifier).clearFilter();
-                            ref.read(bonReceptionStatusFilterProvider.notifier).clearFilter();
                           },
                           icon: const Icon(Icons.clear),
                           label: const Text('Effacer les filtres'),
@@ -242,10 +203,10 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
   }
 
   Widget _buildStatisticsCards(List<BonReception> receptions) {
-    final totalAmount = receptions.fold(0.0, (sum, r) => sum + r.totalAmount);
+    // Statistics calculations
+    final totalCount = receptions.length;
     final totalQuantity = receptions.fold(0, (sum, r) => sum + r.totalQuantity);
-    final enAttenteCount = receptions.where((r) => r.status == 'en_attente').length;
-    final valideCount = receptions.where((r) => r.status == 'valide').length;
+    final totalAmount = receptions.fold(0.0, (sum, r) => sum + r.totalAmount);
 
     return Row(
       children: [
@@ -278,10 +239,10 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            'En attente',
-            enAttenteCount.toString(),
-            Icons.pending,
-            AppColors.warning,
+            'Quantité totale',
+            totalQuantity.toString(),
+            Icons.inventory,
+            AppColors.info,
           ),
         ),
       ],
@@ -366,8 +327,12 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
     return DataTable2(
       columnSpacing: 12,
       horizontalMargin: 12,
-      minWidth: 1000,
+      minWidth: 1100,
       columns: const [
+        DataColumn2(
+          label: Text('N° BR'),
+          size: ColumnSize.S,
+        ),
         DataColumn2(
           label: Text('N° Commande'),
           size: ColumnSize.S,
@@ -393,10 +358,6 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
           size: ColumnSize.S,
         ),
         DataColumn2(
-          label: Text('Statut'),
-          size: ColumnSize.S,
-        ),
-        DataColumn2(
           label: Text('Actions'),
           size: ColumnSize.S,
         ),
@@ -409,6 +370,15 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
 
         return DataRow2(
           cells: [
+            DataCell(
+              Text(
+                reception.numeroBR,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
             DataCell(
               Text(
                 reception.commandeNumber,
@@ -437,58 +407,11 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
               ),
             ),
             DataCell(
-              _buildStatusChip(reception.status),
-            ),
-            DataCell(
               _buildActionButtons(reception),
             ),
           ],
         );
       }).toList(),
-    );
-  }
-
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
-    String label;
-
-    switch (status) {
-      case 'en_attente':
-        backgroundColor = AppColors.warning.withOpacity(0.1);
-        textColor = AppColors.warning;
-        label = 'En attente';
-        break;
-      case 'valide':
-        backgroundColor = AppColors.success.withOpacity(0.1);
-        textColor = AppColors.success;
-        label = 'Validé';
-        break;
-      case 'annule':
-        backgroundColor = AppColors.error.withOpacity(0.1);
-        textColor = AppColors.error;
-        label = 'Annulé';
-        break;
-      default:
-        backgroundColor = AppColors.textSecondary.withOpacity(0.1);
-        textColor = AppColors.textSecondary;
-        label = status;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
     );
   }
 
@@ -526,22 +449,6 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
             color: AppColors.error,
           ),
         ),
-        // Status actions
-        if (reception.status == 'en_attente')
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
-            onSelected: (status) => _updateStatus(reception, status),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'valide',
-                child: Text('Valider'),
-              ),
-              const PopupMenuItem(
-                value: 'annule',
-                child: Text('Annuler'),
-              ),
-            ],
-          ),
       ],
     );
   }
@@ -606,28 +513,6 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
     );
   }
 
-  void _updateStatus(BonReception reception, String newStatus) async {
-    try {
-      await ref.read(bonReceptionListProvider.notifier).updateReceptionStatus(reception.id, newStatus);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Statut mis à jour vers: ${newStatus == 'valide' ? 'Validé' : 'Annulé'}'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
 }
 
 // Reception details dialog
@@ -756,7 +641,6 @@ class _ReceptionDetailsDialog extends StatelessWidget {
       children: [
         _buildInfoRow('N° Commande:', reception.commandeNumber),
         _buildInfoRow('Date de réception:', DateFormat('dd/MM/yyyy').format(reception.dateReception)),
-        _buildInfoRow('Statut:', _getStatusLabel(reception.status)),
         if (reception.notes != null && reception.notes!.isNotEmpty)
           _buildInfoRow('Notes:', reception.notes!),
         _buildInfoRow('Créé le:', DateFormat('dd/MM/yyyy HH:mm').format(reception.createdAt)),
@@ -785,18 +669,5 @@ class _ReceptionDetailsDialog extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'en_attente':
-        return 'En attente';
-      case 'valide':
-        return 'Validé';
-      case 'annule':
-        return 'Annulé';
-      default:
-        return status;
-    }
   }
 }

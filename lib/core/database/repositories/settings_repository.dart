@@ -201,38 +201,34 @@ class SettingsRepository {
     );
   }
 
-  /// Update general settings
-  Future<bool> updateGeneralSettings(String userId, {
-    bool? autoSave,
-    int? autoSaveInterval,
-    bool? confirmBeforeDelete,
-    bool? showTooltips,
-    String? defaultView,
-    int? itemsPerPage,
-    bool? enableShortcuts,
-    Map<String, String>? shortcuts,
-    List<String>? recentFiles,
-    Map<String, dynamic>? preferences,
+  /// Update currency settings
+  Future<bool> updateCurrencySettings(String userId, {
+    required String currency,
+    double? eurToTndRate,
   }) async {
     final settings = await getOrCreateSettingsForUser(userId);
     
     final updatedGeneralSettings = settings.general.copyWith(
-      autoSave: autoSave,
-      autoSaveInterval: autoSaveInterval,
-      confirmBeforeDelete: confirmBeforeDelete,
-      showTooltips: showTooltips,
-      defaultView: defaultView,
-      itemsPerPage: itemsPerPage,
-      enableShortcuts: enableShortcuts,
-      shortcuts: shortcuts,
-      recentFiles: recentFiles,
-      preferences: preferences,
+      currency: currency,
+      eurToTndRate: eurToTndRate,
     );
 
     return await updateSettings(
       settings.id,
       general: updatedGeneralSettings,
     );
+  }
+
+  /// Get current currency for user
+  String getCurrency(String userId) {
+    final settings = getSettingsByUserId(userId);
+    return settings?.general.currency ?? 'EUR';
+  }
+
+  /// Get EUR to TND conversion rate
+  double getEurToTndRate(String userId) {
+    final settings = getSettingsByUserId(userId);
+    return settings?.general.eurToTndRate ?? 3.3;
   }
 
   /// Delete settings

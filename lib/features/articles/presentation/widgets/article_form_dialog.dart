@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/providers/currency_provider.dart';
+import '../../../../core/utils/treatment_suggestion_service.dart';
 import '../../../../data/models/article_model.dart';
+import '../../../../data/models/client_model.dart';
 import '../../../../data/models/treatment_model.dart';
 import '../../application/article_providers.dart';
 import '../../application/treatment_providers.dart';
+import '../../../client/application/client_providers.dart';
 
 class ArticleFormDialog extends ConsumerStatefulWidget {
   const ArticleFormDialog({super.key, this.article});
@@ -24,6 +28,9 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
   
   Map<String, TextEditingController> _priceControllers = {};
   Map<String, double> _treatmentPrices = {};
+  Map<String, String> _customTreatmentNames = {}; // For custom treatments
+  List<String> _suggestedTreatments = [];
+  String? _selectedClientId; // null = general article
   bool _isActive = true;
   bool _isLoading = false;
   
@@ -35,6 +42,9 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
     if (_isEditing) {
       _loadArticleData();
     }
+    
+    // Add listener for designation changes to trigger suggestions
+    _designationController.addListener(_onDesignationChanged);
   }
 
   void _loadArticleData() {
@@ -42,6 +52,7 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
     _referenceController.text = article.reference;
     _designationController.text = article.designation;
     _treatmentPrices = Map.from(article.traitementPrix);
+    _selectedClientId = article.clientId;
     _isActive = article.isActive;
     
     // Initialize price controllers for existing treatments
@@ -51,8 +62,22 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
     }
   }
 
+  void _onDesignationChanged() {
+    final designation = _designationController.text.trim();
+    if (designation.isNotEmpty) {
+      setState(() {
+        _suggestedTreatments = TreatmentSuggestionService.getSuggestedTreatmentsByCategory(designation);
+      });
+    } else {
+      setState(() {
+        _suggestedTreatments = [];
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _designationController.removeListener(_onDesignationChanged);
     _referenceController.dispose();
     _designationController.dispose();
     for (final controller in _priceControllers.values) {
@@ -64,6 +89,7 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
   @override
   Widget build(BuildContext context) {
     final treatments = ref.watch(activeTreatmentsProvider);
+    final clients = ref.watch(clientListProvider);
     
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -89,7 +115,7 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
                   child: Column(
                     children: [
                       // Basic fields
-                      _buildBasicFields(),
+                      _buildBasicFields(clients),
                       const SizedBox(height: 24),
 
                       // Treatments section
@@ -140,7 +166,7 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
     );
   }
 
-  Widget _buildBasicFields() {
+  Widget _buildBasicFields(List<Client> clients) {
     return Column(
       children: [
         Row(
@@ -233,6 +259,40 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
           maxLines: 2,
           textInputAction: TextInputAction.next,
         ),
+        
+        const SizedBox(height: 16),
+        
+        // Client selection dropdown
+        DropdownButtonFormField<String?>(
+          value: _selectedClientId,
+          decoration: InputDecoration(
+            labelText: 'Client',
+            prefixIcon: Icon(Icons.person, color: AppColors.primary),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.primary),
+            ),
+            helperText: 'Laissez vide pour un article général',
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Article général (tous les clients)'),
+            ),
+            ...clients.map((client) => DropdownMenuItem<String?>(
+              value: client.id,
+              child: Text(client.name),
+            )),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _selectedClientId = value;
+            });
+          },
+        ),
       ],
     );
   }
@@ -256,6 +316,79 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
           ),
         ),
         const SizedBox(height: 12),
+        
+        // Treatment suggestions based on designation
+        if (_suggestedTreatments.isNotEmpty) 
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, 
+                         color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Traitements suggérés pour cette catégorie:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _suggestedTreatments.map((suggestion) {
+                    final isAlreadySelected = treatments.any((t) => 
+                        t.name.toLowerCase().contains(suggestion.toLowerCase()) &&
+                        _treatmentPrices.containsKey(t.id));
+                    
+                    return FilterChip(
+                      label: Text(suggestion),
+                      selected: false,
+                      onSelected: isAlreadySelected ? null : (selected) {
+                        if (selected) {
+                          _showManualTreatmentDialog(suggestion);
+                        }
+                      },
+                      backgroundColor: isAlreadySelected 
+                          ? AppColors.success.withOpacity(0.2)
+                          : null,
+                      disabledColor: AppColors.success.withOpacity(0.2),
+                      labelStyle: TextStyle(
+                        color: isAlreadySelected 
+                            ? AppColors.success 
+                            : AppColors.primary,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                if (_suggestedTreatments.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Cliquez sur une suggestion pour ajouter un traitement personnalisé',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        if (_suggestedTreatments.isNotEmpty)
+          const SizedBox(height: 16),
         
         if (treatments.isEmpty)
           Container(
@@ -325,7 +458,7 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
                         enabled: isSelected,
                         decoration: InputDecoration(
                           isDense: true,
-                          suffixText: 'DT',
+                          suffixText: ref.watch(currencySymbolProvider),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(6),
                           ),
@@ -355,6 +488,120 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
                 );
               }).toList(),
             ),
+          ),
+        
+        // Manual treatment addition
+        const SizedBox(height: 12),
+        TextButton.icon(
+          onPressed: () => _showManualTreatmentDialog(null),
+          icon: Icon(Icons.add, color: AppColors.primary),
+          label: Text(
+            'Ajouter un traitement personnalisé',
+            style: TextStyle(color: AppColors.primary),
+          ),
+        ),
+        
+        // Custom treatments section
+        if (_customTreatmentNames.isNotEmpty) 
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Text(
+                'Traitements personnalisés',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: _customTreatmentNames.entries.map((entry) {
+                final customId = entry.key;
+                final treatmentName = entry.value;
+                final controller = _priceControllers[customId]!;
+                
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: _customTreatmentNames.entries.last.key != customId
+                          ? BorderSide(color: AppColors.divider)
+                          : BorderSide.none,
+                    ),
+                  ),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.label_outline,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(
+                      treatmentName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      'Traitement personnalisé',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          child: TextFormField(
+                            controller: controller,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              suffixText: 'DT',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Prix requis';
+                              }
+                              final price = double.tryParse(value);
+                              if (price == null || price < 0) {
+                                return 'Prix invalide';
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              final price = double.tryParse(value);
+                              if (price != null) {
+                                _treatmentPrices[customId] = price;
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _treatmentPrices.remove(customId);
+                              _customTreatmentNames.remove(customId);
+                              _priceControllers[customId]?.dispose();
+                              _priceControllers.remove(customId);
+                            });
+                          },
+                          icon: Icon(Icons.delete_outline),
+                          color: AppColors.error,
+                          tooltip: 'Supprimer ce traitement',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+            ],
           ),
         
         if (_treatmentPrices.isEmpty)
@@ -428,12 +675,14 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
               reference: _referenceController.text.trim(),
               designation: _designationController.text.trim(),
               traitementPrix: Map.from(_treatmentPrices),
+              clientId: _selectedClientId,
               isActive: _isActive,
             )
           : Article(
               reference: _referenceController.text.trim(),
               designation: _designationController.text.trim(),
               traitementPrix: Map.from(_treatmentPrices),
+              clientId: _selectedClientId,
               isActive: _isActive,
             );
 
@@ -465,6 +714,89 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _showManualTreatmentDialog(String? suggestedName) async {
+    final nameController = TextEditingController(text: suggestedName ?? '');
+    final priceController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ajouter un traitement personnalisé'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nom du traitement',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Le nom est requis';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: priceController,
+                decoration: const InputDecoration(
+                  labelText: 'Prix (DT)',
+                  border: OutlineInputBorder(),
+                  suffixText: 'DT',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Le prix est requis';
+                  }
+                  final price = double.tryParse(value);
+                  if (price == null || price < 0) {
+                    return 'Prix invalide';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context, {
+                  'name': nameController.text.trim(),
+                  'price': double.parse(priceController.text.trim()),
+                });
+              }
+            },
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      // Store custom treatment with name embedded in ID for persistence
+      final customId = 'custom_${DateTime.now().millisecondsSinceEpoch}_${result['name'].replaceAll(' ', '_')}';
+      setState(() {
+        _treatmentPrices[customId] = result['price'];
+        _customTreatmentNames[customId] = result['name'];
+        _priceControllers[customId] = TextEditingController(
+          text: result['price'].toString(),
+        );
+      });
     }
   }
 }

@@ -27,11 +27,11 @@ class BonReception extends HiveObject {
   @HiveField(6)
   final DateTime updatedAt;
 
-  @HiveField(7)
-  final String status; // 'en_attente', 'valide', 'annule'
-
   @HiveField(8)
   final String? notes;
+
+  @HiveField(9)
+  final String numeroBR; // Sequential BR number (BR001, BR002, etc.)
 
   BonReception({
     String? id,
@@ -41,8 +41,8 @@ class BonReception extends HiveObject {
     required this.articles,
     DateTime? createdAt,
     DateTime? updatedAt,
-    this.status = 'en_attente',
     this.notes,
+    required this.numeroBR,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -63,11 +63,6 @@ class BonReception extends HiveObject {
   // Check if reception is valid (has at least one article)
   bool get isValid => articles.isNotEmpty;
 
-  // Status helpers
-  bool get isEnAttente => status == 'en_attente';
-  bool get isValide => status == 'valide';
-  bool get isAnnule => status == 'annule';
-
   // Copy with method for updating
   BonReception copyWith({
     String? id,
@@ -77,8 +72,8 @@ class BonReception extends HiveObject {
     List<ArticleReception>? articles,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? status,
     String? notes,
+    String? numeroBR,
   }) {
     return BonReception(
       id: id ?? this.id,
@@ -88,8 +83,8 @@ class BonReception extends HiveObject {
       articles: articles ?? List.from(this.articles),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
-      status: status ?? this.status,
       notes: notes ?? this.notes,
+      numeroBR: numeroBR ?? this.numeroBR,
     );
   }
 
@@ -113,8 +108,8 @@ class BonReception extends HiveObject {
       'articles': articles.map((article) => article.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'status': status,
       'notes': notes,
+      'numeroBR': numeroBR,
       'totalAmount': totalAmount,
       'totalQuantity': totalQuantity,
       'articlesCount': articlesCount,
@@ -133,13 +128,13 @@ class BonReception extends HiveObject {
           .toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
-      status: json['status'] as String? ?? 'en_attente',
       notes: json['notes'] as String?,
+      numeroBR: json['numeroBR'] as String? ?? 'BR000', // Fallback for existing data
     );
   }
 
   @override
   String toString() {
-    return 'BonReception(id: $id, commande: $commandeNumber, client: $clientId, articles: ${articles.length})';
+    return 'BonReception(id: $id, numeroBR: $numeroBR, commande: $commandeNumber, client: $clientId, articles: ${articles.length})';
   }
 }

@@ -546,6 +546,12 @@ class GeneralSettings extends HiveObject {
   @HiveField(7)
   final int defaultPageSize;
 
+  @HiveField(8)
+  final String currency; // EUR or TND
+
+  @HiveField(9)
+  final double eurToTndRate; // Conversion rate from EUR to TND
+
   GeneralSettings({
     this.autoSave = true,
     this.autoSaveInterval = 300, // 5 minutes
@@ -555,6 +561,8 @@ class GeneralSettings extends HiveObject {
     this.startWithSystem = false,
     this.minimizeToTray = true,
     this.defaultPageSize = 25,
+    this.currency = 'EUR', // Default to EUR
+    this.eurToTndRate = 3.3, // Default conversion rate (approximate)
   });
 
   GeneralSettings copyWith({
@@ -566,6 +574,8 @@ class GeneralSettings extends HiveObject {
     bool? startWithSystem,
     bool? minimizeToTray,
     int? defaultPageSize,
+    String? currency,
+    double? eurToTndRate,
   }) {
     return GeneralSettings(
       autoSave: autoSave ?? this.autoSave,
@@ -576,6 +586,8 @@ class GeneralSettings extends HiveObject {
       startWithSystem: startWithSystem ?? this.startWithSystem,
       minimizeToTray: minimizeToTray ?? this.minimizeToTray,
       defaultPageSize: defaultPageSize ?? this.defaultPageSize,
+      currency: currency ?? this.currency,
+      eurToTndRate: eurToTndRate ?? this.eurToTndRate,
     );
   }
 
@@ -589,6 +601,8 @@ class GeneralSettings extends HiveObject {
       'startWithSystem': startWithSystem,
       'minimizeToTray': minimizeToTray,
       'defaultPageSize': defaultPageSize,
+      'currency': currency,
+      'eurToTndRate': eurToTndRate,
     };
   }
 
@@ -602,6 +616,8 @@ class GeneralSettings extends HiveObject {
       startWithSystem: json['startWithSystem'] ?? false,
       minimizeToTray: json['minimizeToTray'] ?? true,
       defaultPageSize: json['defaultPageSize'] ?? 25,
+      currency: json['currency'] ?? 'EUR',
+      eurToTndRate: json['eurToTndRate']?.toDouble() ?? 3.3,
     );
   }
 }

@@ -134,11 +134,11 @@ class HomeScreen extends ConsumerWidget {
       case 6:
         return const InventoryScreen();
       case 7:
-        return const _PlaceholderPage(title: AppStrings.menuEncaissements);
+        return _PlaceholderPage(title: AppStrings.menuEncaissements);
       case 8:
-        return const _PlaceholderPage(title: AppStrings.menuParametres);
+        return _PlaceholderPage(title: AppStrings.menuParametres);
       default:
-        return const _PlaceholderPage(title: 'Page non trouvée');
+        return _PlaceholderPage(title: 'Page non trouvée');
     }
   }
 }

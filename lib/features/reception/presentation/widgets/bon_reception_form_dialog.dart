@@ -4,12 +4,18 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/providers/currency_provider.dart';
+import '../../../../core/services/counter_service.dart';
+import '../../../../core/utils/treatment_suggestion_service.dart';
 import '../../../../data/models/bon_reception_model.dart';
 import '../../../../data/models/article_reception_model.dart';
 import '../../../../data/models/client_model.dart';
 import '../../../../data/models/article_model.dart';
+import '../../../../data/models/treatment_model.dart';
 import '../../../client/application/client_providers.dart';
 import '../../../articles/application/article_providers.dart';
+import '../../../articles/application/treatment_providers.dart';
+import '../../../articles/presentation/widgets/article_form_dialog.dart';
 import '../../application/bon_reception_providers.dart';
 
 class BonReceptionFormDialog extends ConsumerStatefulWidget {
@@ -28,7 +34,7 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
   
   Client? _selectedClient;
   DateTime _selectedDate = DateTime.now();
-  String _selectedStatus = 'en_attente';
+  String _brNumber = '';
   List<ArticleReception> _articles = [];
   bool _isLoading = false;
   
@@ -39,6 +45,9 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
     super.initState();
     if (_isEditing) {
       _loadReceptionData();
+    } else {
+      // For new BR, show placeholder until saved
+      _brNumber = 'Nouveau BR';
     }
   }
 
@@ -47,7 +56,7 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
     _commandeNumberController.text = reception.commandeNumber;
     _notesController.text = reception.notes ?? '';
     _selectedDate = reception.dateReception;
-    _selectedStatus = reception.status;
+    _brNumber = reception.numeroBR;
     _articles = List.from(reception.articles);
     
     // Load client data
@@ -194,6 +203,37 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
             
             const SizedBox(width: 16),
             
+            // BR Number display
+            Expanded(
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Numéro BR',
+                  prefixIcon: Icon(Icons.numbers, color: AppColors.primary),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.primary),
+                  ),
+                ),
+                child: Text(
+                  _brNumber.isEmpty ? 'Génération...' : _brNumber,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _brNumber.isEmpty ? Colors.grey : AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(width: 16),
+        
+        Row(
+          children: [
             // Commande number
             Expanded(
               child: TextFormField(
@@ -229,13 +269,9 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
                 textInputAction: TextInputAction.next,
               ),
             ),
-          ],
-        ),
-        
-        const SizedBox(height: 16),
-        
-        Row(
-          children: [
+            
+            const SizedBox(width: 16),
+            
             // Date picker
             Expanded(
               child: InkWell(
@@ -257,36 +293,6 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
-              ),
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Status dropdown
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _selectedStatus,
-                decoration: InputDecoration(
-                  labelText: 'Statut',
-                  prefixIcon: Icon(Icons.flag, color: AppColors.primary),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'en_attente', child: Text('En attente')),
-                  DropdownMenuItem(value: 'valide', child: Text('Validé')),
-                  DropdownMenuItem(value: 'annule', child: Text('Annulé')),
-                ],
-                onChanged: (status) {
-                  setState(() {
-                    _selectedStatus = status!;
-                  });
-                },
               ),
             ),
           ],
@@ -374,7 +380,21 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
                       article.articleReference,
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
-                    subtitle: Text(article.articleDesignation),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(article.articleDesignation),
+                        if (article.treatmentName != null)
+                          Text(
+                            'Traitement: ${article.treatmentName}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.info,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                      ],
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -563,22 +583,28 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
     setState(() => _isLoading = true);
 
     try {
+      // Generate BR number only when actually saving a new BR
+      String brNumber = _brNumber;
+      if (!_isEditing) {
+        brNumber = await CounterService.getNextBRNumber();
+      }
+
       final reception = _isEditing
           ? widget.reception!.copyWith(
               clientId: _selectedClient!.id,
               dateReception: _selectedDate,
               commandeNumber: _commandeNumberController.text.trim(),
               articles: List.from(_articles),
-              status: _selectedStatus,
               notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+              numeroBR: brNumber,
             )
           : BonReception(
               clientId: _selectedClient!.id,
               dateReception: _selectedDate,
               commandeNumber: _commandeNumberController.text.trim(),
               articles: List.from(_articles),
-              status: _selectedStatus,
               notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+              numeroBR: brNumber,
             );
 
       if (_isEditing) {
@@ -613,8 +639,8 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
   }
 }
 
-// Article selection dialog
-class _ArticleSelectionDialog extends StatefulWidget {
+// Enhanced Article selection dialog with create new article option
+class _ArticleSelectionDialog extends ConsumerStatefulWidget {
   const _ArticleSelectionDialog({
     required this.articles,
     required this.onArticleSelected,
@@ -626,17 +652,29 @@ class _ArticleSelectionDialog extends StatefulWidget {
   final ArticleReception? initialArticle;
 
   @override
-  State<_ArticleSelectionDialog> createState() => _ArticleSelectionDialogState();
+  ConsumerState<_ArticleSelectionDialog> createState() => _ArticleSelectionDialogState();
 }
 
-class _ArticleSelectionDialogState extends State<_ArticleSelectionDialog> {
+class _ArticleSelectionDialogState extends ConsumerState<_ArticleSelectionDialog> {
   final _quantityController = TextEditingController();
   final _priceController = TextEditingController();
+  final _newRefController = TextEditingController();
+  final _newDesignationController = TextEditingController();
+  
   Article? _selectedArticle;
+  Treatment? _selectedTreatment;
+  String? _customTreatmentName;
+  double? _customTreatmentPrice;
+  List<String> _suggestedTreatments = [];
+  bool _isCreatingNew = false;
 
   @override
   void initState() {
     super.initState();
+    
+    // Add listener for designation changes to trigger suggestions
+    _newDesignationController.addListener(_onDesignationChanged);
+    
     if (widget.initialArticle != null) {
       final initial = widget.initialArticle!;
       _quantityController.text = initial.quantity.toString();
@@ -648,15 +686,51 @@ class _ArticleSelectionDialogState extends State<_ArticleSelectionDialog> {
           (article) => article.reference == initial.articleReference,
         );
       } catch (e) {
-        _selectedArticle = null;
+        // Article not found, maybe it was created inline
+        _isCreatingNew = true;
+        _newRefController.text = initial.articleReference;
+        _newDesignationController.text = initial.articleDesignation;
+        _onDesignationChanged(); // Trigger suggestions for existing designation
       }
+
+      // Load treatment if available
+      if (initial.treatmentId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final treatments = ref.read(activeTreatmentsProvider);
+          try {
+            _selectedTreatment = treatments.firstWhere(
+              (treatment) => treatment.id == initial.treatmentId,
+            );
+            setState(() {});
+          } catch (e) {
+            // Treatment not found - might be custom treatment
+            _customTreatmentName = initial.treatmentName;
+          }
+        });
+      }
+    }
+  }
+
+  void _onDesignationChanged() {
+    final designation = _newDesignationController.text.trim();
+    if (designation.isNotEmpty) {
+      setState(() {
+        _suggestedTreatments = TreatmentSuggestionService.getSuggestedTreatmentsByCategory(designation);
+      });
+    } else {
+      setState(() {
+        _suggestedTreatments = [];
+      });
     }
   }
 
   @override
   void dispose() {
+    _newDesignationController.removeListener(_onDesignationChanged);
     _quantityController.dispose();
     _priceController.dispose();
+    _newRefController.dispose();
+    _newDesignationController.dispose();
     super.dispose();
   }
 
@@ -665,87 +739,366 @@ class _ArticleSelectionDialogState extends State<_ArticleSelectionDialog> {
     return AlertDialog(
       title: Text(widget.initialArticle != null ? 'Modifier l\'article' : 'Ajouter un article'),
       content: SizedBox(
-        width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Article dropdown
-            DropdownButtonFormField<Article>(
-              value: _selectedArticle,
-              decoration: InputDecoration(
-                labelText: 'Article *',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+        width: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Toggle between existing and new article
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isCreatingNew = false;
+                          _selectedArticle = null;
+                        });
+                      },
+                      icon: Icon(
+                        Icons.inventory,
+                        color: !_isCreatingNew ? AppColors.primary : Colors.grey,
+                      ),
+                      label: Text(
+                        'Article existant',
+                        style: TextStyle(
+                          color: !_isCreatingNew ? AppColors.primary : Colors.grey,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: !_isCreatingNew ? AppColors.primary : Colors.grey,
+                          width: !_isCreatingNew ? 2 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isCreatingNew = true;
+                          _selectedArticle = null;
+                        });
+                      },
+                      icon: Icon(
+                        Icons.add_box,
+                        color: _isCreatingNew ? AppColors.success : Colors.grey,
+                      ),
+                      label: Text(
+                        'Créer nouveau',
+                        style: TextStyle(
+                          color: _isCreatingNew ? AppColors.success : Colors.grey,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: _isCreatingNew ? AppColors.success : Colors.grey,
+                          width: _isCreatingNew ? 2 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              items: widget.articles.map((article) {
-                return DropdownMenuItem<Article>(
-                  value: article,
-                  child: Text('${article.reference} - ${article.designation}'),
-                );
-              }).toList(),
-              onChanged: (article) {
-                setState(() {
-                  _selectedArticle = article;
-                });
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Veuillez sélectionner un article';
-                }
-                return null;
-              },
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Quantity field
-            TextFormField(
-              controller: _quantityController,
-              decoration: InputDecoration(
-                labelText: 'Quantité *',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              
+              const SizedBox(height: 20),
+              
+              // Article selection or creation
+              if (_isCreatingNew) ...[
+                // New article creation fields
+                TextFormField(
+                  controller: _newRefController,
+                  decoration: InputDecoration(
+                    labelText: 'Référence *',
+                    prefixIcon: Icon(Icons.tag, color: AppColors.primary),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  textInputAction: TextInputAction.next,
                 ),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Quantité requise';
-                }
-                final quantity = int.tryParse(value);
-                if (quantity == null || quantity <= 0) {
-                  return 'Quantité invalide';
-                }
-                return null;
-              },
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Price field
-            TextFormField(
-              controller: _priceController,
-              decoration: InputDecoration(
-                labelText: 'Prix unitaire *',
-                suffixText: 'DT',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _newDesignationController,
+                  decoration: InputDecoration(
+                    labelText: 'Désignation *',
+                    prefixIcon: Icon(Icons.description, color: AppColors.primary),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  maxLines: 2,
+                  textInputAction: TextInputAction.next,
                 ),
+              ] else ...[
+                // Existing article selection
+                DropdownButtonFormField<Article>(
+                  value: _selectedArticle,
+                  decoration: InputDecoration(
+                    labelText: 'Article *',
+                    prefixIcon: Icon(Icons.inventory, color: AppColors.primary),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  items: widget.articles.map((article) {
+                    return DropdownMenuItem<Article>(
+                      value: article,
+                      child: Text('${article.reference} - ${article.designation}'),
+                    );
+                  }).toList(),
+                  onChanged: (article) {
+                    setState(() {
+                      _selectedArticle = article;
+                    });
+                  },
+                ),
+              ],
+              
+              const SizedBox(height: 16),
+              
+              // Common fields for both modes
+              Row(
+                children: [
+                  // Quantity field
+                  Expanded(
+                    child: TextFormField(
+                      controller: _quantityController,
+                      decoration: InputDecoration(
+                        labelText: 'Quantité *',
+                        prefixIcon: Icon(Icons.confirmation_number, color: AppColors.primary),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 16),
+                  
+                  // Price field
+                  Expanded(
+                    child: TextFormField(
+                      controller: _priceController,
+                      decoration: InputDecoration(
+                        labelText: 'Prix unitaire *',
+                        suffixText: 'DT',
+                        prefixIcon: Icon(Icons.attach_money, color: AppColors.primary),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.done,
+                    ),
+                  ),
+                ],
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Prix requis';
-                }
-                final price = double.tryParse(value);
-                if (price == null || price < 0) {
-                  return 'Prix invalide';
-                }
-                return null;
-              },
-            ),
-          ],
+              
+              const SizedBox(height: 16),
+              
+              // Treatment suggestions for new articles
+              if (_isCreatingNew && _suggestedTreatments.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb_outline, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Traitements suggérés:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: _suggestedTreatments.take(6).map((suggestion) {
+                          return ActionChip(
+                            label: Text(suggestion),
+                            onPressed: () => _addCustomTreatment(suggestion),
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              if (_isCreatingNew && _suggestedTreatments.isNotEmpty)
+                const SizedBox(height: 16),
+              
+              // Treatment selection
+              DropdownButtonFormField<Treatment>(
+                value: _selectedTreatment,
+                decoration: InputDecoration(
+                  labelText: 'Traitement existant (optionnel)',
+                  prefixIcon: Icon(Icons.build, color: AppColors.primary),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.primary),
+                  ),
+                ),
+                items: [
+                  const DropdownMenuItem<Treatment>(
+                    value: null,
+                    child: Text('Aucun traitement'),
+                  ),
+                  ...ref.watch(activeTreatmentsProvider).map((treatment) {
+                    final currencyService = ref.watch(currencyServiceProvider);
+                    final formattedPrice = currencyService.formatPrice(treatment.defaultPrice);
+                    return DropdownMenuItem<Treatment>(
+                      value: treatment,
+                      child: Text('${treatment.name} - $formattedPrice'),
+                    );
+                  }).toList(),
+                ],
+                onChanged: (treatment) {
+                  setState(() {
+                    _selectedTreatment = treatment;
+                    // Clear custom treatment if existing treatment is selected
+                    if (treatment != null) {
+                      _customTreatmentName = null;
+                      _customTreatmentPrice = null;
+                      _priceController.text = treatment.defaultPrice.toString();
+                    }
+                  });
+                },
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Custom treatment section
+              if (_customTreatmentName != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.label_outline, color: AppColors.success, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Traitement personnalisé:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _customTreatmentName = null;
+                                _customTreatmentPrice = null;
+                              });
+                            },
+                            icon: Icon(Icons.close, size: 18),
+                            color: AppColors.error,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _customTreatmentName!,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      if (_customTreatmentPrice != null)
+                        Text(
+                          ref.watch(currencyServiceProvider).formatPrice(_customTreatmentPrice!),
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              
+              // Add custom treatment button
+              if (_customTreatmentName == null && _selectedTreatment == null)
+                TextButton.icon(
+                  onPressed: () => _showCustomTreatmentDialog(),
+                  icon: Icon(Icons.add, color: AppColors.primary),
+                  label: Text(
+                    'Ajouter un traitement personnalisé',
+                    style: TextStyle(color: AppColors.primary),
+                  ),
+                ),
+              
+              if (_isCreatingNew) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info, color: AppColors.info, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Le nouvel article sera automatiquement ajouté au catalogue.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -755,45 +1108,195 @@ class _ArticleSelectionDialogState extends State<_ArticleSelectionDialog> {
         ),
         ElevatedButton(
           onPressed: _saveArticle,
-          child: const Text('Ajouter'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _isCreatingNew ? AppColors.success : AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(_isCreatingNew ? 'Créer et Ajouter' : 'Ajouter'),
         ),
       ],
     );
   }
 
-  void _saveArticle() {
-    if (_selectedArticle == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un article')),
-      );
-      return;
+  void _addCustomTreatment(String treatmentName) {
+    setState(() {
+      _customTreatmentName = treatmentName;
+      _selectedTreatment = null; // Clear existing treatment selection
+    });
+    _showCustomTreatmentDialog(treatmentName);
+  }
+
+  Future<void> _showCustomTreatmentDialog([String? suggestedName]) async {
+    final nameController = TextEditingController(text: suggestedName ?? _customTreatmentName ?? '');
+    final priceController = TextEditingController(
+      text: _customTreatmentPrice?.toString() ?? '',
+    );
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Traitement personnalisé'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nom du traitement',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Le nom est requis';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: priceController,
+                decoration: InputDecoration(
+                  labelText: 'Prix (${ref.watch(currencySymbolProvider)}) - optionnel',
+                  border: const OutlineInputBorder(),
+                  suffixText: ref.watch(currencySymbolProvider),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value != null && value.trim().isNotEmpty) {
+                    final price = double.tryParse(value);
+                    if (price == null || price < 0) {
+                      return 'Prix invalide';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final price = priceController.text.trim().isNotEmpty
+                    ? double.tryParse(priceController.text.trim())
+                    : null;
+                Navigator.pop(context, {
+                  'name': nameController.text.trim(),
+                  'price': price,
+                });
+              }
+            },
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _customTreatmentName = result['name'];
+        _customTreatmentPrice = result['price'];
+        _selectedTreatment = null;
+        
+        // Update price field if custom treatment has a price
+        if (_customTreatmentPrice != null) {
+          _priceController.text = _customTreatmentPrice!.toString();
+        }
+      });
+    }
+  }
+
+  Future<void> _saveArticle() async {
+    // Validate fields
+    if (_isCreatingNew) {
+      if (_newRefController.text.trim().isEmpty) {
+        _showError('Veuillez saisir une référence');
+        return;
+      }
+      if (_newDesignationController.text.trim().isEmpty) {
+        _showError('Veuillez saisir une désignation');
+        return;
+      }
+    } else {
+      if (_selectedArticle == null) {
+        _showError('Veuillez sélectionner un article');
+        return;
+      }
     }
     
     final quantity = int.tryParse(_quantityController.text);
     final price = double.tryParse(_priceController.text);
     
     if (quantity == null || quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Quantité invalide')),
-      );
+      _showError('Quantité invalide');
       return;
     }
     
     if (price == null || price < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prix invalide')),
-      );
+      _showError('Prix invalide');
       return;
     }
 
-    final articleReception = ArticleReception(
-      articleReference: _selectedArticle!.reference,
-      quantity: quantity,
-      unitPrice: price,
-      articleDesignation: _selectedArticle!.designation,
-    );
+    try {
+      String articleRef;
+      String articleDesignation;
+      
+      if (_isCreatingNew) {
+        // Create new article and save to repository
+        final newArticle = Article(
+          reference: _newRefController.text.trim(),
+          designation: _newDesignationController.text.trim(),
+          traitementPrix: {}, // Empty treatments map initially
+        );
+        
+        // Auto-save to ArticleRepository
+        await ref.read(articleListProvider.notifier).addArticle(newArticle);
+        
+        articleRef = newArticle.reference;
+        articleDesignation = newArticle.designation;
+        
+        // Show success message for new article creation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Nouvel article "${newArticle.reference}" créé et ajouté au catalogue'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        articleRef = _selectedArticle!.reference;
+        articleDesignation = _selectedArticle!.designation;
+      }
 
-    widget.onArticleSelected(articleReception);
-    Navigator.pop(context);
+      final articleReception = ArticleReception(
+        articleReference: articleRef,
+        quantity: quantity,
+        unitPrice: price,
+        articleDesignation: articleDesignation,
+        treatmentId: _selectedTreatment?.id ?? (_customTreatmentName != null ? 'custom_${DateTime.now().millisecondsSinceEpoch}' : null),
+        treatmentName: _selectedTreatment?.name ?? _customTreatmentName,
+      );
+
+      widget.onArticleSelected(articleReception);
+      Navigator.pop(context);
+    } catch (e) {
+      _showError('Erreur lors de la création: $e');
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+      ),
+    );
   }
 }

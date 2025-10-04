@@ -40,21 +40,6 @@ class BonReceptionClientFilter extends _$BonReceptionClientFilter {
   }
 }
 
-// Status filter provider
-@riverpod
-class BonReceptionStatusFilter extends _$BonReceptionStatusFilter {
-  @override
-  String? build() => null;
-
-  void selectStatus(String? status) {
-    state = status;
-  }
-
-  void clearFilter() {
-    state = null;
-  }
-}
-
 // Date range filter provider
 @riverpod
 class BonReceptionDateFilter extends _$BonReceptionDateFilter {
@@ -90,7 +75,6 @@ class BonReceptionList extends _$BonReceptionList {
     final repository = ref.watch(bonReceptionRepositoryProvider);
     final searchQuery = ref.watch(bonReceptionSearchQueryProvider);
     final clientFilter = ref.watch(bonReceptionClientFilterProvider);
-    final statusFilter = ref.watch(bonReceptionStatusFilterProvider);
     final dateFilter = ref.watch(bonReceptionDateFilterProvider);
 
     List<BonReception> receptions;
@@ -105,26 +89,12 @@ class BonReceptionList extends _$BonReceptionList {
       receptions = repository.getAllReceptions();
     }
 
-    // Apply status filter
-    if (statusFilter != null) {
-      receptions = receptions.where((r) => r.status == statusFilter).toList();
-    }
-
-    // Apply client filter
-    if (clientFilter != null) {
-      receptions = receptions.where((r) => r.clientId == clientFilter).toList();
-    }
-
-    // Apply search query
-    if (searchQuery.isNotEmpty) {
-      final lowercaseQuery = searchQuery.toLowerCase();
-      receptions = receptions.where((reception) {
-        return reception.commandeNumber.toLowerCase().contains(lowercaseQuery) ||
-               reception.notes?.toLowerCase().contains(lowercaseQuery) == true ||
-               reception.articles.any((article) => 
-                   article.articleReference.toLowerCase().contains(lowercaseQuery) ||
-                   article.articleDesignation.toLowerCase().contains(lowercaseQuery));
-      }).toList();
+    // Apply search and client filters
+    if (searchQuery.isNotEmpty || clientFilter != null) {
+      receptions = repository.searchReceptions(
+        searchQuery,
+        clientId: clientFilter,
+      );
     }
 
     return receptions;
@@ -148,13 +118,6 @@ class BonReceptionList extends _$BonReceptionList {
   Future<void> deleteReception(String id) async {
     final repository = ref.read(bonReceptionRepositoryProvider);
     await repository.deleteReception(id);
-    ref.invalidateSelf();
-  }
-
-  // Update reception status
-  Future<void> updateReceptionStatus(String id, String status) async {
-    final repository = ref.read(bonReceptionRepositoryProvider);
-    await repository.updateReceptionStatus(id, status);
     ref.invalidateSelf();
   }
 
@@ -198,11 +161,6 @@ Map<String, dynamic> receptionStatistics(ReceptionStatisticsRef ref) {
     'total': {
       'count': repository.getReceptionsCount(),
       'amount': repository.getTotalAmount(),
-    },
-    'byStatus': {
-      'en_attente': repository.getReceptionsCountByStatus('en_attente'),
-      'valide': repository.getReceptionsCountByStatus('valide'),
-      'annule': repository.getReceptionsCountByStatus('annule'),
     },
     'currentMonth': monthStats,
     'currentYear': yearStats,

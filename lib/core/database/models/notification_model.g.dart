@@ -146,6 +146,64 @@ class NotificationActionAdapter extends TypeAdapter<NotificationAction> {
           typeId == other.typeId;
 }
 
+class NotificationChannelAdapter extends TypeAdapter<NotificationChannel> {
+  @override
+  final int typeId = 24;
+
+  @override
+  NotificationChannel read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return NotificationChannel(
+      id: fields[0] as String?,
+      name: fields[1] as String,
+      description: fields[2] as String,
+      defaultPriority: fields[3] as NotificationPriority,
+      isEnabled: fields[4] as bool,
+      soundEnabled: fields[5] as bool,
+      vibrationEnabled: fields[6] as bool,
+      soundPath: fields[7] as String?,
+      settings: (fields[8] as Map?)?.cast<String, dynamic>(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, NotificationChannel obj) {
+    writer
+      ..writeByte(9)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.name)
+      ..writeByte(2)
+      ..write(obj.description)
+      ..writeByte(3)
+      ..write(obj.defaultPriority)
+      ..writeByte(4)
+      ..write(obj.isEnabled)
+      ..writeByte(5)
+      ..write(obj.soundEnabled)
+      ..writeByte(6)
+      ..write(obj.vibrationEnabled)
+      ..writeByte(7)
+      ..write(obj.soundPath)
+      ..writeByte(8)
+      ..write(obj.settings);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NotificationChannelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 class NotificationTypeAdapter extends TypeAdapter<NotificationType> {
   @override
   final int typeId = 20;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/validation_utils.dart';
 import '../../../../data/models/client_model.dart';
 import '../../application/client_providers.dart';
 
@@ -161,11 +162,19 @@ class _ClientFormDialogState extends ConsumerState<ClientFormDialog> {
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: AppColors.primary),
                           ),
+                          helperText: 'Format: 8 chiffres + lettres optionnelles (ex: 12345678A)',
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return AppStrings.fieldRequired;
                           }
+                          
+                          // Use our custom Tunisian fiscal validation
+                          final fiscalError = ValidationUtils.validateMatriculeFiscal(value);
+                          if (fiscalError != null) {
+                            return fiscalError;
+                          }
+                          
                           // Check if matricule fiscal already exists
                           final repository = ref.read(clientRepositoryProvider);
                           final exists = repository.matriculeFiscalExists(
@@ -199,11 +208,7 @@ class _ClientFormDialogState extends ConsumerState<ClientFormDialog> {
                           if (value == null || value.trim().isEmpty) {
                             return AppStrings.fieldRequired;
                           }
-                          // Basic phone validation
-                          if (!RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value.trim())) {
-                            return AppStrings.invalidPhone;
-                          }
-                          return null;
+                          return ValidationUtils.validatePhone(value.trim());
                         },
                         keyboardType: TextInputType.phone,
                         textInputAction: TextInputAction.next,
@@ -228,11 +233,7 @@ class _ClientFormDialogState extends ConsumerState<ClientFormDialog> {
                           if (value == null || value.trim().isEmpty) {
                             return AppStrings.fieldRequired;
                           }
-                          // Email validation
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
-                            return AppStrings.invalidEmail;
-                          }
-                          return null;
+                          return ValidationUtils.validateEmail(value.trim());
                         },
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,

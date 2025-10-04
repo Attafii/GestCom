@@ -285,26 +285,42 @@ class PdfInvoiceService {
 
   // Build totals section
   pw.Widget _buildTotals(Facturation facturation) {
-    const tva = 0.19; // 19% TVA
-    final ht = facturation.totalAmount / (1 + tva);
-    final montantTva = facturation.totalAmount - ht;
-
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.end,
+    return pw.Column(
       children: [
-        pw.Container(
-          width: 200,
-          child: pw.Column(
-            children: [
-              _buildTotalRow('Total HT:', '${ht.toStringAsFixed(3)} DT'),
-              _buildTotalRow('TVA (19%):', '${montantTva.toStringAsFixed(3)} DT'),
-              pw.Divider(color: PdfColors.grey400),
-              _buildTotalRow(
-                'TOTAL TTC:',
-                '${facturation.totalAmount.toStringAsFixed(3)} DT',
-                isTotal: true,
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.end,
+          children: [
+            pw.Container(
+              width: 200,
+              child: pw.Column(
+                children: [
+                  _buildTotalRow(
+                    'TOTAL HT:',
+                    '${facturation.totalAmount.toStringAsFixed(3)} DT',
+                    isTotal: true,
+                  ),
+                ],
               ),
-            ],
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 20),
+        // Add the required note
+        pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            border: pw.Border.all(color: PdfColors.grey300),
+            borderRadius: pw.BorderRadius.circular(5),
+          ),
+          child: pw.Text(
+            'Opération hors champ TVA',
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              fontStyle: pw.FontStyle.italic,
+            ),
+            textAlign: pw.TextAlign.center,
           ),
         ),
       ],

@@ -306,7 +306,7 @@ class _RecentReceptionsProviderElement
 }
 
 String _$receptionStatisticsHash() =>
-    r'0db1aeec04699c6c2e5aa27a4c51b0c4b89bedeb';
+    r'86886938c17b021b5b30cf14f9f293119cc3e432';
 
 /// See also [receptionStatistics].
 @ProviderFor(receptionStatistics)
@@ -484,23 +484,6 @@ final bonReceptionClientFilterProvider =
 );
 
 typedef _$BonReceptionClientFilter = AutoDisposeNotifier<String?>;
-String _$bonReceptionStatusFilterHash() =>
-    r'b140548578557f1e88b64e5fc0de6872e51e6194';
-
-/// See also [BonReceptionStatusFilter].
-@ProviderFor(BonReceptionStatusFilter)
-final bonReceptionStatusFilterProvider =
-    AutoDisposeNotifierProvider<BonReceptionStatusFilter, String?>.internal(
-  BonReceptionStatusFilter.new,
-  name: r'bonReceptionStatusFilterProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$bonReceptionStatusFilterHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-typedef _$BonReceptionStatusFilter = AutoDisposeNotifier<String?>;
 String _$bonReceptionDateFilterHash() =>
     r'111ae0f4341b0f524d334c549c5d971b1e828bdc';
 
@@ -518,7 +501,7 @@ final bonReceptionDateFilterProvider =
 );
 
 typedef _$BonReceptionDateFilter = AutoDisposeNotifier<DateRange?>;
-String _$bonReceptionListHash() => r'0fceff7082e5d668e3290b66e726b134d0611b3d';
+String _$bonReceptionListHash() => r'e803c75dc916566c57abfa4d050c0a2257432899';
 
 /// See also [BonReceptionList].
 @ProviderFor(BonReceptionList)

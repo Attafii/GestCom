@@ -21,13 +21,15 @@ class ArticleReceptionAdapter extends TypeAdapter<ArticleReception> {
       quantity: fields[1] as int,
       unitPrice: fields[2] as double,
       articleDesignation: fields[3] as String,
+      treatmentId: fields[4] as String?,
+      treatmentName: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ArticleReception obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.articleReference)
       ..writeByte(1)
@@ -35,7 +37,11 @@ class ArticleReceptionAdapter extends TypeAdapter<ArticleReception> {
       ..writeByte(2)
       ..write(obj.unitPrice)
       ..writeByte(3)
-      ..write(obj.articleDesignation);
+      ..write(obj.articleDesignation)
+      ..writeByte(4)
+      ..write(obj.treatmentId)
+      ..writeByte(5)
+      ..write(obj.treatmentName);
   }
 
   @override
