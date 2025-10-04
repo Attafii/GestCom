@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_strings.dart';
+import '../core/providers/backup_providers.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
 class GestComApp extends ConsumerWidget {
@@ -10,6 +11,9 @@ class GestComApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Initialize backup service on app startup
+    ref.read(backupServiceProvider);
+    
     return MaterialApp(
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
