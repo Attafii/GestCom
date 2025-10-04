@@ -12,8 +12,9 @@ import '../../../inventaire/screens/inventory_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../navigation/presentation/widgets/app_navigation_drawer.dart';
 
-// Navigation provider
+// Navigation providers
 final selectedPageProvider = StateProvider<int>((ref) => 0);
+final navbarCollapsedProvider = StateProvider<bool>((ref) => false);
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -21,19 +22,30 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPage = ref.watch(selectedPageProvider);
+    final isCollapsed = ref.watch(navbarCollapsedProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+    final isTablet = screenWidth >= 768 && screenWidth < 1024;
 
     return Scaffold(
+      // Mobile drawer
+      drawer: isMobile ? AppNavigationDrawer(isCollapsed: false, isMobile: true) : null,
       body: Row(
         children: [
-          // Navigation Drawer
-          const AppNavigationDrawer(),
+          // Desktop/Tablet Navigation Drawer
+          if (!isMobile)
+            AppNavigationDrawer(
+              isCollapsed: isCollapsed,
+              isMobile: false,
+            ),
           
           // Vertical divider
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: AppColors.divider,
-          ),
+          if (!isMobile)
+            VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: AppColors.divider,
+            ),
           
           // Main content area
           Expanded(
@@ -54,20 +66,46 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 24),
-                      Text(
-                        _getPageTitle(selectedPage),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                      // Menu button (mobile) or collapse button (desktop)
+                      if (isMobile)
+                        IconButton(
+                          onPressed: () {
+                            Scaffold.of(context).openDrawer();
+                          },
+                          icon: const Icon(
+                            Icons.menu,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'Menu',
+                        )
+                      else
+                        IconButton(
+                          onPressed: () {
+                            ref.read(navbarCollapsedProvider.notifier).state = !isCollapsed;
+                          },
+                          icon: Icon(
+                            isCollapsed ? Icons.menu_open : Icons.menu,
+                            color: Colors.white,
+                          ),
+                          tooltip: isCollapsed ? 'Développer le menu' : 'Réduire le menu',
+                        ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _getPageTitle(selectedPage),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isMobile ? 18 : 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 16),
                       // User info or settings
                       IconButton(
                         onPressed: () {
-                          // TODO: Implement settings
+                          ref.read(selectedPageProvider.notifier).state = 8;
                         },
                         icon: const Icon(
                           Icons.settings,
@@ -75,7 +113,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         tooltip: 'Paramètres',
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
                     ],
                   ),
                 ),

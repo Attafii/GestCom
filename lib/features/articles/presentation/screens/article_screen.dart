@@ -4,6 +4,7 @@ import 'package:data_table_2/data_table_2.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../data/models/article_model.dart';
 import '../../../../data/models/client_model.dart';
 import '../../../../data/models/treatment_model.dart';
@@ -36,38 +37,39 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     final activeFilter = ref.watch(articleActiveFilterProvider);
     final clientFilter = ref.watch(articleClientFilterProvider);
     final searchQuery = ref.watch(articleSearchQueryProvider);
+    final responsive = ResponsiveUtils(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: responsive.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header with actions
-            _buildHeader(context),
-            const SizedBox(height: 24),
+            _buildHeader(context, responsive),
+            SizedBox(height: responsive.spacing),
 
             // Search and filters
-            _buildSearchAndFilters(context, activeFilter, clientFilter, clients),
-            const SizedBox(height: 24),
+            _buildSearchAndFilters(context, responsive, activeFilter, clientFilter, clients),
+            SizedBox(height: responsive.spacing),
 
             // Data table
             Expanded(
               child: Card(
                 elevation: 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(responsive.smallSpacing),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Table header
-                      _buildTableHeader(articles, activeFilter, clientFilter, clients),
-                      const SizedBox(height: 16),
+                      _buildTableHeader(articles, activeFilter, clientFilter, clients, responsive),
+                      SizedBox(height: responsive.smallSpacing),
 
                       // Data table
                       Expanded(
-                        child: _buildDataTable(context, articles, treatments, clients),
+                        child: _buildDataTable(context, articles, treatments, clients, responsive),
                       ),
                     ],
                   ),
@@ -80,12 +82,65 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ResponsiveUtils responsive) {
+    if (responsive.isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.inventory,
+                size: responsive.iconSize + 8,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Gestion des Articles',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    fontSize: responsive.headerFontSize,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: responsive.smallSpacing),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _showArticleDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text(AppStrings.add),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(0, responsive.buttonHeight),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _exportArticles,
+                icon: const Icon(Icons.download, size: 18),
+                label: const Text(AppStrings.export),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: Size(0, responsive.buttonHeight),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Row(
       children: [
         Icon(
           Icons.inventory,
-          size: 32,
+          size: responsive.iconSize + 8,
           color: AppColors.primary,
         ),
         const SizedBox(width: 12),
@@ -94,29 +149,34 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
+            fontSize: responsive.headerFontSize,
           ),
         ),
         const Spacer(),
         ElevatedButton.icon(
           onPressed: () => _showArticleDialog(context),
-          icon: const Icon(Icons.add),
+          icon: Icon(Icons.add, size: responsive.iconSize),
           label: const Text(AppStrings.add),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.success,
             foregroundColor: Colors.white,
+            minimumSize: Size(0, responsive.buttonHeight),
           ),
         ),
         const SizedBox(width: 12),
         OutlinedButton.icon(
           onPressed: _exportArticles,
-          icon: const Icon(Icons.download),
+          icon: Icon(Icons.download, size: responsive.iconSize),
           label: const Text(AppStrings.export),
+          style: OutlinedButton.styleFrom(
+            minimumSize: Size(0, responsive.buttonHeight),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSearchAndFilters(BuildContext context, bool? activeFilter, String? clientFilter, List<Client> clients) {
+  Widget _buildSearchAndFilters(BuildContext context, ResponsiveUtils responsive, bool? activeFilter, String? clientFilter, List<Client> clients) {
     return Row(
       children: [
         Expanded(
@@ -221,7 +281,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     );
   }
 
-  Widget _buildTableHeader(List<Article> articles, bool? activeFilter, String? clientFilter, List<Client> clients) {
+  Widget _buildTableHeader(List<Article> articles, bool? activeFilter, String? clientFilter, List<Client> clients, ResponsiveUtils responsive) {
     String countText;
     final filters = <String>[];
     
@@ -270,7 +330,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     );
   }
 
-  Widget _buildDataTable(BuildContext context, List<Article> articles, List<Treatment> treatments, List<Client> clients) {
+  Widget _buildDataTable(BuildContext context, List<Article> articles, List<Treatment> treatments, List<Client> clients, ResponsiveUtils responsive) {
     if (articles.isEmpty) {
       return Center(
         child: Column(

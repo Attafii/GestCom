@@ -6,14 +6,22 @@ import '../../../../../core/constants/app_strings.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 
 class AppNavigationDrawer extends ConsumerWidget {
-  const AppNavigationDrawer({super.key});
+  const AppNavigationDrawer({
+    super.key,
+    required this.isCollapsed,
+    required this.isMobile,
+  });
+
+  final bool isCollapsed;
+  final bool isMobile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPage = ref.watch(selectedPageProvider);
+    final effectiveWidth = isCollapsed && !isMobile ? 72.0 : 280.0;
 
     return Container(
-      width: 280,
+      width: effectiveWidth,
       decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(
@@ -24,37 +32,45 @@ class AppNavigationDrawer extends ConsumerWidget {
         children: [
           // Header
           Container(
-            height: 120,
+            height: isCollapsed && !isMobile ? 72 : 120,
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppColors.primary,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.business,
-                  size: 48,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppStrings.appName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+            child: isCollapsed && !isMobile
+                ? const Center(
+                    child: Icon(
+                      Icons.business,
+                      size: 36,
+                      color: Colors.white,
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.business,
+                        size: 48,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppStrings.appName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        AppStrings.appDescription,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  AppStrings.appDescription,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
           ),
 
           // Navigation Menu
@@ -143,22 +159,23 @@ class AppNavigationDrawer extends ConsumerWidget {
           ),
 
           // Footer
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: AppColors.divider),
+          if (!isCollapsed || isMobile)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: AppColors.divider),
+                ),
+              ),
+              child: Text(
+                'Version 1.0.0',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
-            child: Text(
-              'Version 1.0.0',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
         ],
       ),
     );
@@ -172,7 +189,7 @@ class AppNavigationDrawer extends ConsumerWidget {
     required String title,
     required bool isSelected,
   }) {
-    return Container(
+    final menuItem = Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isSelected ? AppColors.primary.withOpacity(0.1) : null,
@@ -181,29 +198,56 @@ class AppNavigationDrawer extends ConsumerWidget {
             ? Border.all(color: AppColors.primary.withOpacity(0.3))
             : null,
       ),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isSelected ? AppColors.primary : AppColors.textSecondary,
-          size: 22,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? AppColors.primary : AppColors.textPrimary,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            fontSize: 14,
-          ),
-        ),
-        onTap: () {
-          ref.read(selectedPageProvider.notifier).state = index;
-        },
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        dense: true,
-        visualDensity: VisualDensity.compact,
-      ),
+      child: isCollapsed && !isMobile
+          ? IconButton(
+              icon: Icon(
+                icon,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                size: 24,
+              ),
+              onPressed: () {
+                ref.read(selectedPageProvider.notifier).state = index;
+                if (isMobile && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+              tooltip: title,
+            )
+          : ListTile(
+              leading: Icon(
+                icon,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                size: 22,
+              ),
+              title: Text(
+                title,
+                style: TextStyle(
+                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 14,
+                ),
+              ),
+              onTap: () {
+                ref.read(selectedPageProvider.notifier).state = index;
+                if (isMobile && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              dense: true,
+              visualDensity: VisualDensity.compact,
+            ),
     );
+
+    if (isCollapsed && !isMobile) {
+      return Tooltip(
+        message: title,
+        child: menuItem,
+      );
+    }
+
+    return menuItem;
   }
 }
