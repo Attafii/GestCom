@@ -327,4 +327,81 @@ class BonLivraisonRepository {
       (excludeId == null || delivery.id != excludeId)
     );
   }
+
+  // Get non-delivered reception notes
+  List<BonReception> getNonDeliveredBR() {
+    final receptionBox = Hive.box<BonReception>('bon_receptions');
+    final allReceptions = receptionBox.values.toList();
+    final allDeliveries = getAllDeliveries();
+    
+    // Get all delivered article references with their reception IDs
+    final deliveredArticles = <String, Set<String>>{};
+    for (final delivery in allDeliveries.where((d) => d.status != 'annule')) {
+      for (final article in delivery.articles) {
+        if (article.receptionId != null && article.receptionId!.isNotEmpty) {
+          if (!deliveredArticles.containsKey(article.receptionId)) {
+            deliveredArticles[article.receptionId!] = {};
+          }
+          deliveredArticles[article.receptionId]!.add(article.articleReference);
+        }
+      }
+    }
+    
+    // Filter receptions that have articles not yet fully delivered
+    return allReceptions.where((reception) {
+      final deliveredRefs = deliveredArticles[reception.id] ?? {};
+      // Check if all articles are delivered
+      final allArticlesDelivered = reception.articles.every((article) => 
+        deliveredRefs.contains(article.articleReference)
+      );
+      return !allArticlesDelivered;
+    }).toList();
+  }
+
+  // Get remaining quantity for a specific BR article
+  int getRemainingQuantityForBRArticle(String receptionId, String articleReference, String treatmentId) {
+    final receptionBox = Hive.box<BonReception>('bon_receptions');
+    final reception = receptionBox.get(receptionId);
+    
+    if (reception == null) return 0;
+    
+    // Find the article in reception
+    final receptionArticle = reception.articles.firstWhere(
+      (article) => article.articleReference == articleReference,
+      orElse: () => throw Exception('Article not found in reception'),
+    );
+    
+    final receivedQuantity = receptionArticle.quantity;
+    
+    // Calculate total delivered quantity for this article and treatment
+    final deliveries = getAllDeliveries().where((d) => d.status != 'annule');
+    int deliveredQuantity = 0;
+    
+    for (final delivery in deliveries) {
+      for (final article in delivery.articles) {
+        if (article.receptionId == receptionId &&
+            article.articleReference == articleReference &&
+            article.treatmentId == treatmentId) {
+          deliveredQuantity += article.quantityLivree;
+        }
+      }
+    }
+    
+    return receivedQuantity - deliveredQuantity;
+  }
+
+  // Get clients with non-delivered BR
+  List<Client> getClientsWithNonDeliveredBR() {
+    final nonDeliveredBRs = getNonDeliveredBR();
+    final clientBox = Hive.box<Client>('clients');
+    
+    // Get unique client IDs from non-delivered BRs
+    final clientIds = nonDeliveredBRs.map((br) => br.clientId).toSet();
+    
+    // Get client objects
+    return clientIds
+        .map((clientId) => clientBox.get(clientId))
+        .whereType<Client>()
+        .toList();
+  }
 }

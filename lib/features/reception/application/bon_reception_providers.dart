@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../data/repositories/bon_reception_repository.dart';
-import '../../../data/models/bon_reception_model.dart';
+import 'package:gestcom/data/repositories/bon_reception_repository.dart';
+import 'package:gestcom/data/models/bon_reception_model.dart';
 
 part 'bon_reception_providers.g.dart';
 

@@ -236,8 +236,8 @@ class InventoryService {
             quantity: articleLivraison.quantityLivree,
             treatmentId: articleLivraison.treatmentId,
             treatmentName: articleLivraison.treatmentName,
-            unitPrice: articleLivraison.prixUnitaire,
-            totalAmount: articleLivraison.montantTotal,
+            unitPrice: 0.0, // Pricing not tracked in BL
+            totalAmount: 0.0, // Pricing not tracked in BL
             status: delivery.status,
           ));
           totalDelivered += articleLivraison.quantityLivree;

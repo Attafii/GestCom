@@ -23,13 +23,15 @@ class ArticleLivraisonAdapter extends TypeAdapter<ArticleLivraison> {
       treatmentId: fields[3] as String,
       treatmentName: fields[4] as String,
       prixUnitaire: fields[5] as double,
+      receptionId: fields[7] as String?,
+      commentaire: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ArticleLivraison obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.articleReference)
       ..writeByte(1)
@@ -43,7 +45,11 @@ class ArticleLivraisonAdapter extends TypeAdapter<ArticleLivraison> {
       ..writeByte(5)
       ..write(obj.prixUnitaire)
       ..writeByte(6)
-      ..write(obj.montantTotal);
+      ..write(obj.montantTotal)
+      ..writeByte(7)
+      ..write(obj.receptionId)
+      ..writeByte(8)
+      ..write(obj.commentaire);
   }
 
   @override

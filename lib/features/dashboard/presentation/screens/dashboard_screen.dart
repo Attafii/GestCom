@@ -3,18 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/providers/currency_provider.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../data/models/client_model.dart';
 import '../../../../data/models/bon_reception_model.dart';
 import '../../../client/application/client_providers.dart';
 import '../../../reception/application/bon_reception_providers.dart';
 import '../../../articles/application/article_providers.dart';
+import '../../application/dashboard_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardStats = ref.watch(dashboardStatisticsProvider);
+    final recentActivitiesList = ref.watch(recentActivitiesProvider);
+    final topClientsList = ref.watch(topClientsProvider);
+    final trends = ref.watch(monthlyTrendsProvider);
+    
+    // Backward compatibility
     final clients = ref.watch(activeClientsProvider);
     final receptions = ref.watch(recentReceptionsProvider(days: 30));
     final articles = ref.watch(activeArticlesProvider);
@@ -116,68 +124,89 @@ class DashboardScreen extends ConsumerWidget {
     List articles,
     Map<String, dynamic> receptionStats,
   ) {
-    final currentMonthStats = receptionStats['currentMonth'] as Map<String, dynamic>? ?? {};
-    final totalAmount = currentMonthStats['totalAmount'] as double? ?? 0.0;
-    final totalCount = currentMonthStats['count'] as int? ?? 0;
-    final totalQuantity = currentMonthStats['totalQuantity'] as int? ?? 0;
+    return Consumer(
+      builder: (context, ref, child) {
+        final stats = ref.watch(dashboardStatisticsProvider);
+        final currencyService = ref.watch(currencyServiceProvider);
+        final currencySymbol = ref.watch(currencySymbolProvider);
+        
+        final totalCA = stats['totalCA'] as double? ?? 0.0;
+        final totalReceptionAmount = stats['totalReceptionAmount'] as double? ?? 0.0;
+        final totalPaid = stats['totalPaid'] as double? ?? 0.0;
+        final totalUnpaid = stats['totalUnpaid'] as double? ?? 0.0;
+        final totalLivraisons = stats['totalLivraisons'] as int? ?? 0;
+        final pendingLivraisons = stats['pendingLivraisons'] as int? ?? 0;
+        
+        // Calculate percentages
+        final caPercentage = totalCA > 0 ? 100 : 0;
+        final receptionPercentage = totalReceptionAmount > 0 ? 75 : 0;
+        final paidPercentage = (totalPaid + totalUnpaid) > 0 
+            ? ((totalPaid / (totalPaid + totalUnpaid)) * 100).toInt() 
+            : 0;
+        final unpaidPercentage = 100 - paidPercentage;
+        final livraisonPercentage = totalLivraisons > 0 
+            ? ((pendingLivraisons / totalLivraisons) * 100).toInt() 
+            : 0;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            title: 'Chiffre d\'affaire HT',
-            value: '${NumberFormat('#,##0').format(totalAmount.toInt())} €',
-            subtitle: 'CA par état de paiement',
-            icon: Icons.euro,
-            color: const Color(0xFF6366F1),
-            percentage: 81,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Total HT',
-            value: '${NumberFormat('#,##0').format(totalAmount.toInt())} DT',
-            subtitle: 'Chiffre d\'affaires HT',
-            icon: Icons.receipt,
-            color: const Color(0xFF8B5CF6),
-            percentage: 43,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Chiffre d\'affaires HT',
-            value: '${NumberFormat('#,##0').format(totalAmount.toInt())} DT',
-            subtitle: 'Tendance de ventes',
-            icon: Icons.trending_up,
-            color: const Color(0xFFEC4899),
-            percentage: 18,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Total payé',
-            value: '${NumberFormat('#,##0').format((totalAmount * 0.7).toInt())} €',
-            subtitle: 'Total impayé',
-            icon: Icons.payments,
-            color: const Color(0xFF10B981),
-            percentage: 21,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Total impayé',
-            value: '${NumberFormat('#,##0').format((totalAmount * 0.3).toInt())} €',
-            subtitle: 'État des paiements',
-            icon: Icons.money_off,
-            color: const Color(0xFFF59E0B),
-            percentage: 31,
-          ),
-        ),
-      ],
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                title: 'CA Factures',
+                value: currencyService.formatPrice(totalCA),
+                subtitle: '${stats['currentMonthFactures']} factures ce mois',
+                icon: Icons.euro,
+                color: const Color(0xFF6366F1),
+                percentage: caPercentage,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                title: 'Total Réceptions',
+                value: currencyService.formatPrice(totalReceptionAmount),
+                subtitle: '${stats['currentMonthReceptions']} ce mois',
+                icon: Icons.receipt,
+                color: const Color(0xFF8B5CF6),
+                percentage: receptionPercentage,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                title: 'Livraisons',
+                value: '${totalLivraisons} BL',
+                subtitle: '$pendingLivraisons en attente',
+                icon: Icons.local_shipping,
+                color: const Color(0xFFEC4899),
+                percentage: livraisonPercentage,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                title: 'Total Payé',
+                value: currencyService.formatPrice(totalPaid),
+                subtitle: '${stats['paidFactures']} factures',
+                icon: Icons.payments,
+                color: const Color(0xFF10B981),
+                percentage: paidPercentage,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                title: 'Total Impayé',
+                value: currencyService.formatPrice(totalUnpaid),
+                subtitle: '${stats['unpaidFactures']} factures',
+                icon: Icons.money_off,
+                color: const Color(0xFFF59E0B),
+                percentage: unpaidPercentage,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -512,219 +541,230 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildTopClientsTable(List<Client> clients, List<BonReception> receptions) {
-    // Calculate client statistics
-    final clientStats = <String, Map<String, dynamic>>{};
-    for (final reception in receptions) {
-      if (clientStats.containsKey(reception.clientId)) {
-        clientStats[reception.clientId]!['amount'] += reception.totalAmount;
-        clientStats[reception.clientId]!['count'] += 1;
-      } else {
-        clientStats[reception.clientId] = {
-          'amount': reception.totalAmount,
-          'count': 1,
-        };
-      }
-    }
+    return Consumer(
+      builder: (context, ref, child) {
+        final currencyService = ref.watch(currencyServiceProvider);
+        
+        // Calculate client statistics
+        final clientStats = <String, Map<String, dynamic>>{};
+        for (final reception in receptions) {
+          if (clientStats.containsKey(reception.clientId)) {
+            clientStats[reception.clientId]!['amount'] += reception.totalAmount;
+            clientStats[reception.clientId]!['count'] += 1;
+          } else {
+            clientStats[reception.clientId] = {
+              'amount': reception.totalAmount,
+              'count': 1,
+            };
+          }
+        }
 
-    // Sort clients by amount
-    final sortedClientIds = clientStats.keys.toList()
-      ..sort((a, b) => (clientStats[b]!['amount'] as double)
-          .compareTo(clientStats[a]!['amount'] as double));
+        // Sort clients by amount
+        final sortedClientIds = clientStats.keys.toList()
+          ..sort((a, b) => (clientStats[b]!['amount'] as double)
+              .compareTo(clientStats[a]!['amount'] as double));
 
-    final topClients = sortedClientIds.take(5).toList();
+        final topClients = sortedClientIds.take(5).toList();
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Top 5 clients',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...topClients.asMap().entries.map((entry) {
-            final index = entry.key;
-            final clientId = entry.value;
-            final client = clients.firstWhere(
-              (c) => c.id == clientId,
-              orElse: () => Client(name: 'Client inconnu', address: '', matriculeFiscal: '', phone: '', email: ''),
-            );
-            final stats = clientStats[clientId]!;
-            final amount = stats['amount'] as double;
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Top 5 clients',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...topClients.asMap().entries.map((entry) {
+                final index = entry.key;
+                final clientId = entry.value;
+                final client = clients.firstWhere(
+                  (c) => c.id == clientId,
+                  orElse: () => Client(name: 'Client inconnu', address: '', matriculeFiscal: '', phone: '', email: ''),
+                );
+                final stats = clientStats[clientId]!;
+                final amount = stats['amount'] as double;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: _getClientColor(index),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: _getClientColor(index),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          client.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              client.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              currencyService.formatPrice(amount),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          '${amount.toStringAsFixed(0)} €',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
+                      ),
+                      Text(
+                        amount > 10000 ? 'Impayé' : 'Payé',
+                        style: TextStyle(
+                          color: amount > 10000 ? Colors.red : Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    amount > 10000 ? 'Impayé' : 'Payé',
-                    style: TextStyle(
-                      color: amount > 10000 ? Colors.red : Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildRecentReceptionsTable(List<BonReception> receptions, List<Client> clients) {
-    final recentReceptions = receptions.take(4).toList();
+    return Consumer(
+      builder: (context, ref, child) {
+        final currencyService = ref.watch(currencyServiceProvider);
+        final recentReceptions = receptions.take(4).toList();
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '4 dernières factures',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Table headers
-          Row(
-            children: [
-              const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
-              const Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
-              const Expanded(flex: 2, child: Text('Montant HT', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
-              const Expanded(flex: 1, child: Text('Etat', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
             ],
           ),
-          const Divider(),
-          ...recentReceptions.map((reception) {
-            final client = clients.firstWhere(
-              (c) => c.id == reception.clientId,
-              orElse: () => Client(name: 'Client inconnu', address: '', matriculeFiscal: '', phone: '', email: ''),
-            );
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '4 dernières factures',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Table headers
+              Row(
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      DateFormat('dd/MM/yyyy').format(reception.dateReception),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      client.name,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      '${reception.totalAmount.toStringAsFixed(2)} €',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        'Reçu',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
+                  const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
+                  const Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
+                  const Expanded(flex: 2, child: Text('Montant HT', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
+                  const Expanded(flex: 1, child: Text('Etat', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.grey))),
                 ],
               ),
-            );
-          }),
-        ],
-      ),
+              const Divider(),
+              ...recentReceptions.map((reception) {
+                final client = clients.firstWhere(
+                  (c) => c.id == reception.clientId,
+                  orElse: () => Client(name: 'Client inconnu', address: '', matriculeFiscal: '', phone: '', email: ''),
+                );
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          DateFormat('dd/MM/yyyy').format(reception.dateReception),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          client.name,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          currencyService.formatPrice(reception.totalAmount),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.success,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'Reçu',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../data/models/bon_livraison_model.dart';
+import '../../../data/models/bon_reception_model.dart';
 import '../../../data/repositories/bon_livraison_repository.dart';
 
 part 'bon_livraison_providers.g.dart';
@@ -246,6 +247,59 @@ List<BonLivraison> deliveredDeliveries(DeliveredDeliveriesRef ref) {
   return repository.getDeliveriesByStatus('livre');
 }
 
+// Non-delivered BR provider
+@riverpod
+class NonDeliveredBR extends _$NonDeliveredBR {
+  @override
+  List<BonReception> build({String? clientId}) {
+    final repository = ref.read(bonLivraisonRepositoryProvider);
+    final allNonDelivered = repository.getNonDeliveredBR();
+    
+    if (clientId == null) {
+      return allNonDelivered;
+    }
+    
+    return allNonDelivered.where((br) => br.clientId == clientId).toList();
+  }
+
+  void filterByClient(String? clientId) {
+    final repository = ref.read(bonLivraisonRepositoryProvider);
+    final allNonDelivered = repository.getNonDeliveredBR();
+    
+    if (clientId == null) {
+      state = allNonDelivered;
+    } else {
+      state = allNonDelivered.where((br) => br.clientId == clientId).toList();
+    }
+  }
+
+  void refresh({String? clientId}) {
+    final repository = ref.read(bonLivraisonRepositoryProvider);
+    final allNonDelivered = repository.getNonDeliveredBR();
+    
+    if (clientId == null) {
+      state = allNonDelivered;
+    } else {
+      state = allNonDelivered.where((br) => br.clientId == clientId).toList();
+    }
+  }
+}
+
+// Remaining quantity for BR article provider
+@riverpod
+int remainingQuantityForBRArticle(RemainingQuantityForBRArticleRef ref, String brId, String articleReference, String treatmentId) {
+  final repository = ref.read(bonLivraisonRepositoryProvider);
+  return repository.getRemainingQuantityForBRArticle(brId, articleReference, treatmentId);
+}
+
+// Clients with non-delivered BR provider
+@riverpod
+List<String> clientsWithNonDeliveredBR(ClientsWithNonDeliveredBRRef ref) {
+  final repository = ref.read(bonLivraisonRepositoryProvider);
+  final clients = repository.getClientsWithNonDeliveredBR();
+  return clients.map((client) => client.id).toList();
+}
+
 // Form state provider for creating/editing deliveries
 @riverpod
 class BonLivraisonFormState extends _$BonLivraisonFormState {
@@ -277,7 +331,8 @@ class BonLivraisonFormState extends _$BonLivraisonFormState {
         'quantityLivree': article.quantityLivree,
         'treatmentId': article.treatmentId,
         'treatmentName': article.treatmentName,
-        'prixUnitaire': article.prixUnitaire,
+        'receptionId': article.receptionId,
+        'commentaire': article.commentaire,
       }).toList(),
       'signature': delivery.signature,
       'notes': delivery.notes,

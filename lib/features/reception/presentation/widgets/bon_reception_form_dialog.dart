@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../core/providers/currency_provider.dart';
-import '../../../../core/services/counter_service.dart';
-import '../../../../core/utils/treatment_suggestion_service.dart';
-import '../../../../data/models/bon_reception_model.dart';
-import '../../../../data/models/article_reception_model.dart';
-import '../../../../data/models/client_model.dart';
-import '../../../../data/models/article_model.dart';
-import '../../../../data/models/treatment_model.dart';
-import '../../../client/application/client_providers.dart';
-import '../../../articles/application/article_providers.dart';
-import '../../../articles/application/treatment_providers.dart';
-import '../../../articles/presentation/widgets/article_form_dialog.dart';
+import 'package:gestcom/core/constants/app_colors.dart';
+import 'package:gestcom/core/constants/app_strings.dart';
+import 'package:gestcom/core/providers/currency_provider.dart';
+import 'package:gestcom/core/services/counter_service.dart';
+import 'package:gestcom/core/utils/treatment_suggestion_service.dart';
+import 'package:gestcom/data/models/bon_reception_model.dart';
+import 'package:gestcom/data/models/article_reception_model.dart';
+import 'package:gestcom/data/models/client_model.dart';
+import 'package:gestcom/data/models/article_model.dart';
+import 'package:gestcom/data/models/treatment_model.dart';
+import 'package:gestcom/features/client/application/client_providers.dart';
+import 'package:gestcom/features/articles/application/article_providers.dart';
+import 'package:gestcom/features/articles/application/treatment_providers.dart';
+import 'package:gestcom/features/articles/presentation/widgets/article_form_dialog.dart';
 import '../../application/bon_reception_providers.dart';
 
 class BonReceptionFormDialog extends ConsumerStatefulWidget {

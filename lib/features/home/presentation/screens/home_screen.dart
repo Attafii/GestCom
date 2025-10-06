@@ -10,7 +10,7 @@ import '../../../livraison/presentation/screens/livraison_screen.dart';
 import '../../../facturation/presentation/screens/facturation_screen.dart';
 import '../../../inventaire/screens/inventory_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
-import '../../../settings/presentation/screens/backup_settings_screen.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../navigation/presentation/widgets/app_navigation_drawer.dart';
 
 // Navigation providers
@@ -175,7 +175,7 @@ class HomeScreen extends ConsumerWidget {
       case 7:
         return _PlaceholderPage(title: AppStrings.menuEncaissements);
       case 8:
-        return const BackupSettingsScreen();
+        return const SettingsScreen();
       default:
         return _PlaceholderPage(title: 'Page non trouvée');
     }

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../data/models/bon_livraison_model.dart';
-import '../../../../data/models/article_livraison_model.dart';
-import '../../../../data/models/client_model.dart';
-import '../../../../data/models/article_model.dart';
-import '../../../../data/models/treatment_model.dart';
-import '../../../client/application/client_providers.dart';
-import '../../../articles/application/article_providers.dart';
-import '../../../articles/application/treatment_providers.dart';
+import 'package:gestcom/core/constants/app_colors.dart';
+import 'package:gestcom/core/constants/app_strings.dart';
+import 'package:gestcom/data/models/bon_livraison_model.dart';
+import 'package:gestcom/data/models/article_livraison_model.dart';
+import 'package:gestcom/data/models/client_model.dart';
+import 'package:gestcom/data/models/article_model.dart';
+import 'package:gestcom/data/models/treatment_model.dart';
+import 'package:gestcom/features/client/application/client_providers.dart';
+import 'package:gestcom/features/articles/application/article_providers.dart';
+import 'package:gestcom/features/articles/application/treatment_providers.dart';
 import '../../application/bon_livraison_providers.dart';
 
 class BonLivraisonFormDialog extends ConsumerStatefulWidget {
@@ -65,6 +65,8 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
       'treatmentName': article.treatmentName,
       'quantity': article.quantityLivree,
       'price': article.prixUnitaire,
+      'receptionId': article.receptionId,
+      'commentaire': article.commentaire,
       'availableStock': 0, // Will be updated when client is selected
     }).toList();
     
@@ -425,7 +427,7 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
             ),
             const Spacer(),
             Text(
-              'Total: ${_calculateTotalAmount().toStringAsFixed(2)} DT',
+              'Total: ${_calculateTotalPieces()} pi\u00e8ces',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.success,
@@ -453,11 +455,9 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
                 ),
                 child: const Row(
                   children: [
-                    Expanded(flex: 2, child: Text('Article', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 3, child: Text('Article', style: TextStyle(fontWeight: FontWeight.bold))),
                     Expanded(flex: 2, child: Text('Traitement', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Qté', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Prix', style: TextStyle(fontWeight: FontWeight.bold))),
-                    Expanded(child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text('Quantité', style: TextStyle(fontWeight: FontWeight.bold))),
                     SizedBox(width: 50), // Space for remove button
                   ],
                 ),
@@ -473,7 +473,7 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
                   child: Row(
                     children: [
                       Expanded(
-                        flex: 2,
+                        flex: 3,
                         child: Text(
                           article['articleReference'],
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
@@ -512,35 +512,6 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: article['price'].toString(),
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            border: OutlineInputBorder(),
-                            suffixText: 'DT',
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(fontSize: 12),
-                          onChanged: (value) {
-                            final price = double.tryParse(value) ?? 0.0;
-                            setState(() {
-                              _selectedArticles[index]['price'] = price;
-                            });
-                          },
-                          validator: (value) {
-                            final price = double.tryParse(value ?? '') ?? 0.0;
-                            return price <= 0 ? 'Prix invalide' : null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${(article['quantity'] * article['price']).toStringAsFixed(2)} DT',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ),
                       SizedBox(
                         width: 50,
                         child: IconButton(
@@ -685,9 +656,9 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
     });
   }
 
-  double _calculateTotalAmount() {
-    return _selectedArticles.fold(0.0, (sum, article) => 
-        sum + (article['quantity'] * article['price']));
+  int _calculateTotalPieces() {
+    return _selectedArticles.fold(0, (sum, article) => 
+        sum + (article['quantity'] as int));
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -738,7 +709,9 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
           quantityLivree: articleData['quantity'],
           treatmentId: articleData['treatmentId'],
           treatmentName: articleData['treatmentName'],
-          prixUnitaire: articleData['price'],
+          prixUnitaire: (articleData['price'] as num).toDouble(),
+          receptionId: articleData['receptionId'] ?? '',
+          commentaire: articleData['commentaire'],
         );
       }).toList();
 
@@ -747,7 +720,7 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
               clientId: _selectedClient!.id,
               clientName: _selectedClient!.name,
               dateLivraison: _selectedDate,
-              articles: articles,
+              articles: articles.cast<ArticleLivraison>(),
               signature: _signatureController.text.trim().isEmpty ? null : _signatureController.text.trim(),
               notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
             )
@@ -756,7 +729,7 @@ class _BonLivraisonFormDialogState extends ConsumerState<BonLivraisonFormDialog>
               clientId: _selectedClient!.id,
               clientName: _selectedClient!.name,
               dateLivraison: _selectedDate,
-              articles: articles,
+              articles: articles.cast<ArticleLivraison>(),
               signature: _signatureController.text.trim().isEmpty ? null : _signatureController.text.trim(),
               notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
             );

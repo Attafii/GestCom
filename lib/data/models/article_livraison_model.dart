@@ -24,6 +24,12 @@ class ArticleLivraison extends HiveObject {
   
   @HiveField(6)
   final double montantTotal;
+  
+  @HiveField(7)
+  final String? receptionId;
+  
+  @HiveField(8)
+  final String? commentaire;
 
   ArticleLivraison({
     required this.articleReference,
@@ -32,6 +38,8 @@ class ArticleLivraison extends HiveObject {
     required this.treatmentId,
     required this.treatmentName,
     required this.prixUnitaire,
+    this.receptionId,
+    this.commentaire,
   }) : montantTotal = quantityLivree * prixUnitaire;
 
   // Copy with method
@@ -42,6 +50,8 @@ class ArticleLivraison extends HiveObject {
     String? treatmentId,
     String? treatmentName,
     double? prixUnitaire,
+    String? receptionId,
+    String? commentaire,
   }) {
     return ArticleLivraison(
       articleReference: articleReference ?? this.articleReference,
@@ -50,6 +60,8 @@ class ArticleLivraison extends HiveObject {
       treatmentId: treatmentId ?? this.treatmentId,
       treatmentName: treatmentName ?? this.treatmentName,
       prixUnitaire: prixUnitaire ?? this.prixUnitaire,
+      receptionId: receptionId ?? this.receptionId,
+      commentaire: commentaire ?? this.commentaire,
     );
   }
 
@@ -63,6 +75,8 @@ class ArticleLivraison extends HiveObject {
       'treatmentName': treatmentName,
       'prixUnitaire': prixUnitaire,
       'montantTotal': montantTotal,
+      'receptionId': receptionId,
+      'commentaire': commentaire,
     };
   }
 
@@ -74,6 +88,8 @@ class ArticleLivraison extends HiveObject {
       treatmentId: json['treatmentId'],
       treatmentName: json['treatmentName'],
       prixUnitaire: json['prixUnitaire'],
+      receptionId: json['receptionId'],
+      commentaire: json['commentaire'],
     );
   }
 

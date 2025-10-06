@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
-import '../../../../data/models/bon_reception_model.dart';
-import '../../../../data/models/client_model.dart';
-import '../../../client/application/client_providers.dart';
+import 'package:gestcom/core/constants/app_colors.dart';
+import 'package:gestcom/core/constants/app_strings.dart';
+import 'package:gestcom/data/models/bon_reception_model.dart';
+import 'package:gestcom/data/models/client_model.dart';
+import 'package:gestcom/features/client/application/client_providers.dart';
 import '../../application/bon_reception_providers.dart';
 import '../widgets/bon_reception_form_dialog.dart';
 

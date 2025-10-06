@@ -95,6 +95,8 @@ class BonLivraison extends HiveObject {
   // Helper getters
   int get totalQuantity => articles.fold(0, (sum, article) => sum + article.quantityLivree);
   
+  int get totalPieces => totalQuantity; // Alias for totalQuantity
+  
   int get totalArticles => articles.length;
   
   bool get isDelivered => status == 'livre';

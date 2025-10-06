@@ -263,9 +263,9 @@ class _LivraisonScreenState extends ConsumerState<LivraisonScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            'Montant Total',
-            '${stats['totalAmount'].toStringAsFixed(2)} DT',
-            Icons.attach_money,
+            'Total Pi\u00e8ces',
+            '${stats['totalPieces']} pcs',
+            Icons.inventory_2,
             AppColors.info,
           ),
         ),
@@ -417,10 +417,10 @@ class _LivraisonScreenState extends ConsumerState<LivraisonScreen> {
                       ),
                       DataCell(
                         Text(
-                          '${delivery.montantTotal.toStringAsFixed(2)} DT',
+                          '${delivery.totalPieces} pcs',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.success,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),

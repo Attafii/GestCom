@@ -14,6 +14,8 @@ import 'data/models/bon_livraison_model.dart';
 import 'data/models/article_livraison_model.dart';
 import 'data/models/facturation_model.dart';
 import 'core/services/initialization_service.dart';
+import 'core/services/test_data_service.dart';
+import 'core/database/services/hive_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,8 +23,20 @@ void main() async {
   // Initialize Hive
   await _initializeHive();
   
+  // Initialize HiveService for Settings and other advanced features
+  try {
+    await HiveService.initialize();
+    debugPrint('HiveService initialized successfully');
+  } catch (e) {
+    debugPrint('Warning: HiveService initialization failed: $e');
+    // Continue anyway - Settings will use defaults
+  }
+  
   // Initialize default data
   await InitializationService().initializeDefaultData();
+  
+  // Populate test data - COMMENT THIS LINE IN PRODUCTION
+  await TestDataService.populateTestData();
   
   runApp(
     const ProviderScope(

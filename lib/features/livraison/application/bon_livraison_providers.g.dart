@@ -372,6 +372,189 @@ final deliveredDeliveriesProvider =
 );
 
 typedef DeliveredDeliveriesRef = AutoDisposeProviderRef<List<BonLivraison>>;
+String _$remainingQuantityForBRArticleHash() =>
+    r'199d4145953867553457df905311e918f36a27b2';
+
+/// See also [remainingQuantityForBRArticle].
+@ProviderFor(remainingQuantityForBRArticle)
+const remainingQuantityForBRArticleProvider =
+    RemainingQuantityForBRArticleFamily();
+
+/// See also [remainingQuantityForBRArticle].
+class RemainingQuantityForBRArticleFamily extends Family<int> {
+  /// See also [remainingQuantityForBRArticle].
+  const RemainingQuantityForBRArticleFamily();
+
+  /// See also [remainingQuantityForBRArticle].
+  RemainingQuantityForBRArticleProvider call(
+    String brId,
+    String articleReference,
+    String treatmentId,
+  ) {
+    return RemainingQuantityForBRArticleProvider(
+      brId,
+      articleReference,
+      treatmentId,
+    );
+  }
+
+  @override
+  RemainingQuantityForBRArticleProvider getProviderOverride(
+    covariant RemainingQuantityForBRArticleProvider provider,
+  ) {
+    return call(
+      provider.brId,
+      provider.articleReference,
+      provider.treatmentId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'remainingQuantityForBRArticleProvider';
+}
+
+/// See also [remainingQuantityForBRArticle].
+class RemainingQuantityForBRArticleProvider extends AutoDisposeProvider<int> {
+  /// See also [remainingQuantityForBRArticle].
+  RemainingQuantityForBRArticleProvider(
+    String brId,
+    String articleReference,
+    String treatmentId,
+  ) : this._internal(
+          (ref) => remainingQuantityForBRArticle(
+            ref as RemainingQuantityForBRArticleRef,
+            brId,
+            articleReference,
+            treatmentId,
+          ),
+          from: remainingQuantityForBRArticleProvider,
+          name: r'remainingQuantityForBRArticleProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$remainingQuantityForBRArticleHash,
+          dependencies: RemainingQuantityForBRArticleFamily._dependencies,
+          allTransitiveDependencies:
+              RemainingQuantityForBRArticleFamily._allTransitiveDependencies,
+          brId: brId,
+          articleReference: articleReference,
+          treatmentId: treatmentId,
+        );
+
+  RemainingQuantityForBRArticleProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.brId,
+    required this.articleReference,
+    required this.treatmentId,
+  }) : super.internal();
+
+  final String brId;
+  final String articleReference;
+  final String treatmentId;
+
+  @override
+  Override overrideWith(
+    int Function(RemainingQuantityForBRArticleRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: RemainingQuantityForBRArticleProvider._internal(
+        (ref) => create(ref as RemainingQuantityForBRArticleRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        brId: brId,
+        articleReference: articleReference,
+        treatmentId: treatmentId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeProviderElement<int> createElement() {
+    return _RemainingQuantityForBRArticleProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RemainingQuantityForBRArticleProvider &&
+        other.brId == brId &&
+        other.articleReference == articleReference &&
+        other.treatmentId == treatmentId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, brId.hashCode);
+    hash = _SystemHash.combine(hash, articleReference.hashCode);
+    hash = _SystemHash.combine(hash, treatmentId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+mixin RemainingQuantityForBRArticleRef on AutoDisposeProviderRef<int> {
+  /// The parameter `brId` of this provider.
+  String get brId;
+
+  /// The parameter `articleReference` of this provider.
+  String get articleReference;
+
+  /// The parameter `treatmentId` of this provider.
+  String get treatmentId;
+}
+
+class _RemainingQuantityForBRArticleProviderElement
+    extends AutoDisposeProviderElement<int>
+    with RemainingQuantityForBRArticleRef {
+  _RemainingQuantityForBRArticleProviderElement(super.provider);
+
+  @override
+  String get brId => (origin as RemainingQuantityForBRArticleProvider).brId;
+  @override
+  String get articleReference =>
+      (origin as RemainingQuantityForBRArticleProvider).articleReference;
+  @override
+  String get treatmentId =>
+      (origin as RemainingQuantityForBRArticleProvider).treatmentId;
+}
+
+String _$clientsWithNonDeliveredBRHash() =>
+    r'0af74242fbe9ee37757439780701fe339d58d309';
+
+/// See also [clientsWithNonDeliveredBR].
+@ProviderFor(clientsWithNonDeliveredBR)
+final clientsWithNonDeliveredBRProvider =
+    AutoDisposeProvider<List<String>>.internal(
+  clientsWithNonDeliveredBR,
+  name: r'clientsWithNonDeliveredBRProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$clientsWithNonDeliveredBRHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef ClientsWithNonDeliveredBRRef = AutoDisposeProviderRef<List<String>>;
 String _$bonLivraisonListHash() => r'1d21b7ea967ba34227d11914b588c51ed19ad941';
 
 /// See also [BonLivraisonList].
@@ -604,8 +787,151 @@ class _AvailableStockForClientProviderElement
   String get clientId => (origin as AvailableStockForClientProvider).clientId;
 }
 
+String _$nonDeliveredBRHash() => r'6b9cdeeb1932f811f007c6145a86334213913cfe';
+
+abstract class _$NonDeliveredBR
+    extends BuildlessAutoDisposeNotifier<List<BonReception>> {
+  late final String? clientId;
+
+  List<BonReception> build({
+    String? clientId,
+  });
+}
+
+/// See also [NonDeliveredBR].
+@ProviderFor(NonDeliveredBR)
+const nonDeliveredBRProvider = NonDeliveredBRFamily();
+
+/// See also [NonDeliveredBR].
+class NonDeliveredBRFamily extends Family<List<BonReception>> {
+  /// See also [NonDeliveredBR].
+  const NonDeliveredBRFamily();
+
+  /// See also [NonDeliveredBR].
+  NonDeliveredBRProvider call({
+    String? clientId,
+  }) {
+    return NonDeliveredBRProvider(
+      clientId: clientId,
+    );
+  }
+
+  @override
+  NonDeliveredBRProvider getProviderOverride(
+    covariant NonDeliveredBRProvider provider,
+  ) {
+    return call(
+      clientId: provider.clientId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'nonDeliveredBRProvider';
+}
+
+/// See also [NonDeliveredBR].
+class NonDeliveredBRProvider extends AutoDisposeNotifierProviderImpl<
+    NonDeliveredBR, List<BonReception>> {
+  /// See also [NonDeliveredBR].
+  NonDeliveredBRProvider({
+    String? clientId,
+  }) : this._internal(
+          () => NonDeliveredBR()..clientId = clientId,
+          from: nonDeliveredBRProvider,
+          name: r'nonDeliveredBRProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$nonDeliveredBRHash,
+          dependencies: NonDeliveredBRFamily._dependencies,
+          allTransitiveDependencies:
+              NonDeliveredBRFamily._allTransitiveDependencies,
+          clientId: clientId,
+        );
+
+  NonDeliveredBRProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.clientId,
+  }) : super.internal();
+
+  final String? clientId;
+
+  @override
+  List<BonReception> runNotifierBuild(
+    covariant NonDeliveredBR notifier,
+  ) {
+    return notifier.build(
+      clientId: clientId,
+    );
+  }
+
+  @override
+  Override overrideWith(NonDeliveredBR Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: NonDeliveredBRProvider._internal(
+        () => create()..clientId = clientId,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        clientId: clientId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeNotifierProviderElement<NonDeliveredBR, List<BonReception>>
+      createElement() {
+    return _NonDeliveredBRProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is NonDeliveredBRProvider && other.clientId == clientId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, clientId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+mixin NonDeliveredBRRef on AutoDisposeNotifierProviderRef<List<BonReception>> {
+  /// The parameter `clientId` of this provider.
+  String? get clientId;
+}
+
+class _NonDeliveredBRProviderElement extends AutoDisposeNotifierProviderElement<
+    NonDeliveredBR, List<BonReception>> with NonDeliveredBRRef {
+  _NonDeliveredBRProviderElement(super.provider);
+
+  @override
+  String? get clientId => (origin as NonDeliveredBRProvider).clientId;
+}
+
 String _$bonLivraisonFormStateHash() =>
-    r'f81f7d3540f7c349ccff8f7f635d6f13c69aac27';
+    r'5c21a5acc83879f40fb3ca0bac7ed32d24fd1531';
 
 /// See also [BonLivraisonFormState].
 @ProviderFor(BonLivraisonFormState)

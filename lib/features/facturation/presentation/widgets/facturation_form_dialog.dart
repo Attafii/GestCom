@@ -547,7 +547,7 @@ class _FacturationFormDialogState extends ConsumerState<FacturationFormDialog> {
                           ),
                           DataCell(
                             Text(
-                              '${bl.montantTotal.toStringAsFixed(3)} DT',
+                              '${bl.totalPieces} pcs',
                               style: const TextStyle(fontWeight: FontWeight.w500),
                             ),
                           ),
