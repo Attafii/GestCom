@@ -33,9 +33,9 @@ class PdfBLService {
           _buildArticlesTable(bonLivraison.articles),
           pw.SizedBox(height: 20),
           _buildSummary(bonLivraison),
-          if (bonLivraison.commentaire != null && bonLivraison.commentaire!.isNotEmpty) ...[
+          if (bonLivraison.notes != null && bonLivraison.notes!.isNotEmpty) ...[
             pw.SizedBox(height: 15),
-            _buildComments(bonLivraison.commentaire!),
+            _buildComments(bonLivraison.notes!),
           ],
           pw.SizedBox(height: 30),
           _buildSignatureSection(),

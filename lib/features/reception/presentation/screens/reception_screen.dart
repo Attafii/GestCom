@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 
 import 'package:gestcom/core/constants/app_colors.dart';
 import 'package:gestcom/core/constants/app_strings.dart';
+import 'package:gestcom/core/utils/responsive_utils.dart';
+import 'package:gestcom/core/utils/responsive_utils.dart';
+import 'package:gestcom/core/providers/currency_provider.dart';
 import 'package:gestcom/data/models/bon_reception_model.dart';
 import 'package:gestcom/data/models/client_model.dart';
 import 'package:gestcom/features/client/application/client_providers.dart';
@@ -29,6 +32,7 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final responsive = context.responsive;
     final receptions = ref.watch(bonReceptionListProvider);
     final clients = ref.watch(activeClientsProvider);
     final clientFilter = ref.watch(bonReceptionClientFilterProvider);
@@ -37,137 +41,24 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: responsive.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header with actions
-            Row(
-              children: [
-                Icon(
-                  Icons.input,
-                  size: 32,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Bons de réception',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: () => _showReceptionDialog(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nouveau bon'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
+            _buildHeader(context, responsive),
 
-            const SizedBox(height: 24),
+            SizedBox(height: responsive.spacing),
 
             // Filters and search
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        // Search field
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Rechercher par n° commande, notes ou articles...',
-                              prefixIcon: Icon(Icons.search, color: AppColors.primary),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: AppColors.divider),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: AppColors.primary),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                            onChanged: (value) {
-                              ref.read(bonReceptionSearchQueryProvider.notifier).updateQuery(value);
-                            },
-                          ),
-                        ),
+            _buildFiltersCard(context, responsive, clients, clientFilter, searchQuery),
 
-                        const SizedBox(width: 16),
-
-                        // Client filter
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: clientFilter,
-                            decoration: InputDecoration(
-                              labelText: 'Filtrer par client',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                            items: [
-                              const DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('Tous les clients'),
-                              ),
-                              ...clients.map((client) {
-                                return DropdownMenuItem<String>(
-                                  value: client.id,
-                                  child: Text(client.name),
-                                );
-                              }),
-                            ],
-                            onChanged: (clientId) {
-                              ref.read(bonReceptionClientFilterProvider.notifier).selectClient(clientId);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Clear filters button
-                    if (searchQuery.isNotEmpty || clientFilter != null)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            _searchController.clear();
-                            ref.read(bonReceptionSearchQueryProvider.notifier).clearQuery();
-                            ref.read(bonReceptionClientFilterProvider.notifier).clearFilter();
-                          },
-                          icon: const Icon(Icons.clear),
-                          label: const Text('Effacer les filtres'),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
+            SizedBox(height: responsive.spacing / 1.5),
 
             // Statistics cards
-            _buildStatisticsCards(receptions),
+            _buildStatisticsCards(receptions, responsive),
 
-            const SizedBox(height: 16),
+            SizedBox(height: responsive.spacing / 1.5),
 
             // Data table
             Expanded(
@@ -202,72 +93,75 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
     );
   }
 
-  Widget _buildStatisticsCards(List<BonReception> receptions) {
+  Widget _buildStatisticsCards(List<BonReception> receptions, ResponsiveUtils responsive) {
     // Statistics calculations
     final totalCount = receptions.length;
     final totalQuantity = receptions.fold(0, (sum, r) => sum + r.totalQuantity);
     final totalAmount = receptions.fold(0.0, (sum, r) => sum + r.totalAmount);
+    final currencyService = ref.watch(currencyServiceProvider);
+
+    final cards = [
+      _buildStatCard(
+        'Total des bons',
+        receptions.length.toString(),
+        Icons.receipt_long,
+        AppColors.primary,
+        responsive,
+      ),
+      _buildStatCard(
+        'Montant total',
+        currencyService.formatPrice(totalAmount),
+        Icons.monetization_on,
+        AppColors.success,
+        responsive,
+      ),
+      _buildStatCard(
+        'Quantité totale',
+        totalQuantity.toString(),
+        Icons.inventory,
+        AppColors.info,
+        responsive,
+      ),
+    ];
+
+    if (responsive.isMobile) {
+      return Column(
+        children: cards.map((card) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: card,
+        )).toList(),
+      );
+    }
 
     return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            'Total des bons',
-            receptions.length.toString(),
-            Icons.receipt_long,
-            AppColors.primary,
-          ),
+      children: cards.map((card) => Expanded(
+        child: Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: card,
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Montant total',
-            '${totalAmount.toStringAsFixed(2)} DT',
-            Icons.monetization_on,
-            AppColors.success,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Quantité totale',
-            totalQuantity.toString(),
-            Icons.inventory,
-            AppColors.info,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Quantité totale',
-            totalQuantity.toString(),
-            Icons.inventory,
-            AppColors.info,
-          ),
-        ),
-      ],
+      )).toList(),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color, ResponsiveUtils responsive) {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(responsive.isMobile ? 12 : 16),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(responsive.isMobile ? 10 : 12),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: responsive.iconSize),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: responsive.isMobile ? 10 : 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,15 +169,15 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: responsive.isMobile ? 11 : 12,
                       color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: responsive.isMobile ? 16 : 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -297,6 +191,8 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
   }
 
   Widget _buildDataTable(List<BonReception> receptions, List<Client> clients) {
+    final currencyService = ref.watch(currencyServiceProvider);
+    
     if (receptions.isEmpty) {
       return Center(
         child: Column(
@@ -328,6 +224,7 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
       columnSpacing: 12,
       horizontalMargin: 12,
       minWidth: 1100,
+      dataRowHeight: null,
       columns: const [
         DataColumn2(
           label: Text('N° BR'),
@@ -399,11 +296,8 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
             ),
             DataCell(
               Text(
-                '${reception.totalAmount.toStringAsFixed(2)} DT',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
+                currencyService.formatPrice(reception.totalAmount),
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
             DataCell(
@@ -427,8 +321,11 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
             icon: const Icon(Icons.visibility),
             iconSize: 20,
             color: AppColors.info,
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
         ),
+        const SizedBox(width: 4),
         // Edit
         Tooltip(
           message: 'Modifier',
@@ -437,8 +334,11 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
             icon: const Icon(Icons.edit),
             iconSize: 20,
             color: AppColors.primary,
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
         ),
+        const SizedBox(width: 4),
         // Delete
         Tooltip(
           message: 'Supprimer',
@@ -447,9 +347,223 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
             icon: const Icon(Icons.delete),
             iconSize: 20,
             color: AppColors.error,
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, ResponsiveUtils responsive) {
+    if (responsive.isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.input,
+                size: responsive.iconSize + 8,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Bons de réception',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    fontSize: responsive.headerFontSize,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showReceptionDialog(context),
+              icon: Icon(Icons.add, size: responsive.iconSize),
+              label: const Text('Nouveau bon'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+                minimumSize: Size(0, responsive.buttonHeight),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Icon(
+          Icons.input,
+          size: responsive.iconSize + 8,
+          color: AppColors.primary,
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Bons de réception',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+            fontSize: responsive.headerFontSize,
+          ),
+        ),
+        const Spacer(),
+        ElevatedButton.icon(
+          onPressed: () => _showReceptionDialog(context),
+          icon: Icon(Icons.add, size: responsive.iconSize),
+          label: const Text('Nouveau bon'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.success,
+            foregroundColor: Colors.white,
+            minimumSize: Size(0, responsive.buttonHeight),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFiltersCard(BuildContext context, ResponsiveUtils responsive, List<Client> clients, String? clientFilter, String searchQuery) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(responsive.isMobile ? 12 : 16),
+        child: Column(
+          children: [
+            if (responsive.isMobile)
+              Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Rechercher...',
+                      prefixIcon: Icon(Icons.search, color: AppColors.primary),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.divider),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: AppColors.primary),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (value) {
+                      ref.read(bonReceptionSearchQueryProvider.notifier).updateQuery(value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: clientFilter,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Filtrer par client',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('Tous les clients'),
+                      ),
+                      ...clients.map((client) {
+                        return DropdownMenuItem<String>(
+                          value: client.id,
+                          child: Text(client.name),
+                        );
+                      }),
+                    ],
+                    onChanged: (clientId) {
+                      ref.read(bonReceptionClientFilterProvider.notifier).selectClient(clientId);
+                    },
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher par n° commande, notes ou articles...',
+                        prefixIcon: Icon(Icons.search, color: AppColors.primary),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.divider),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onChanged: (value) {
+                        ref.read(bonReceptionSearchQueryProvider.notifier).updateQuery(value);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: clientFilter,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Filtrer par client',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Tous les clients'),
+                        ),
+                        ...clients.map((client) {
+                          return DropdownMenuItem<String>(
+                            value: client.id,
+                            child: Text(client.name),
+                          );
+                        }),
+                      ],
+                      onChanged: (clientId) {
+                        ref.read(bonReceptionClientFilterProvider.notifier).selectClient(clientId);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            if (searchQuery.isNotEmpty || clientFilter != null) ...[
+              SizedBox(height: responsive.isMobile ? 8 : 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    _searchController.clear();
+                    ref.read(bonReceptionSearchQueryProvider.notifier).clearQuery();
+                    ref.read(bonReceptionClientFilterProvider.notifier).clearFilter();
+                  },
+                  icon: Icon(Icons.clear, size: responsive.iconSize),
+                  label: const Text('Effacer les filtres'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -516,13 +630,15 @@ class _ReceptionScreenState extends ConsumerState<ReceptionScreen> {
 }
 
 // Reception details dialog
-class _ReceptionDetailsDialog extends StatelessWidget {
+class _ReceptionDetailsDialog extends ConsumerWidget {
   const _ReceptionDetailsDialog({required this.reception});
 
   final BonReception reception;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currencyService = ref.watch(currencyServiceProvider);
+    
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -590,11 +706,8 @@ class _ReceptionDetailsDialog extends StatelessWidget {
                       title: Text(article.articleReference),
                       subtitle: Text(article.articleDesignation),
                       trailing: Text(
-                        '${article.totalPrice.toStringAsFixed(2)} DT',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                        currencyService.formatPrice(article.totalPrice),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ),
                   );
@@ -619,8 +732,8 @@ class _ReceptionDetailsDialog extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    '${reception.totalAmount.toStringAsFixed(2)} DT',
-                    style: TextStyle(
+                    currencyService.formatPrice(reception.totalAmount),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,

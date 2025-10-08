@@ -398,12 +398,14 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '${article.unitPrice.toStringAsFixed(2)} DT',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final currencyService = ref.watch(currencyServiceProvider);
+                            return Text(
+                              currencyService.formatPrice(article.unitPrice),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            );
+                          },
                         ),
                         const SizedBox(width: 8),
                         IconButton(
@@ -441,13 +443,19 @@ class _BonReceptionFormDialogState extends ConsumerState<BonReceptionFormDialog>
                   'Total: ${_articles.length} articles - ${_articles.fold(0, (sum, a) => sum + a.quantity)} unités',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
-                Text(
-                  '${_articles.fold(0.0, (sum, a) => sum + a.totalPrice).toStringAsFixed(2)} DT',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: AppColors.primary,
-                  ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final currencyService = ref.watch(currencyServiceProvider);
+                    final total = _articles.fold(0.0, (sum, a) => sum + a.totalPrice);
+                    return Text(
+                      currencyService.formatPrice(total),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -900,22 +908,27 @@ class _ArticleSelectionDialogState extends ConsumerState<_ArticleSelectionDialog
                   
                   // Price field
                   Expanded(
-                    child: TextFormField(
-                      controller: _priceController,
-                      decoration: InputDecoration(
-                        labelText: 'Prix unitaire *',
-                        suffixText: 'DT',
-                        prefixIcon: Icon(Icons.attach_money, color: AppColors.primary),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: AppColors.primary),
-                        ),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      textInputAction: TextInputAction.done,
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        final currencyService = ref.watch(currencyServiceProvider);
+                        return TextFormField(
+                          controller: _priceController,
+                          decoration: InputDecoration(
+                            labelText: 'Prix unitaire *',
+                            suffixText: currencyService.getCurrencySymbol(),
+                            prefixIcon: Icon(Icons.attach_money, color: AppColors.primary),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.primary),
+                            ),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textInputAction: TextInputAction.done,
+                        );
+                      },
                     ),
                   ),
                 ],

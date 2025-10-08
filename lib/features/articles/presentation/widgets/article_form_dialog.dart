@@ -552,31 +552,36 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
                       children: [
                         SizedBox(
                           width: 100,
-                          child: TextFormField(
-                            controller: controller,
-                            decoration: InputDecoration(
-                              isDense: true,
-                              suffixText: 'DT',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Prix requis';
-                              }
-                              final price = double.tryParse(value);
-                              if (price == null || price < 0) {
-                                return 'Prix invalide';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              final price = double.tryParse(value);
-                              if (price != null) {
-                                _treatmentPrices[customId] = price;
-                              }
+                          child: Consumer(
+                            builder: (context, ref, _) {
+                              final currencyService = ref.watch(currencyServiceProvider);
+                              return TextFormField(
+                                controller: controller,
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  suffixText: currencyService.getCurrencySymbol(),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Prix requis';
+                                  }
+                                  final price = double.tryParse(value);
+                                  if (price == null || price < 0) {
+                                    return 'Prix invalide';
+                                  }
+                                  return null;
+                                },
+                                onChanged: (value) {
+                                  final price = double.tryParse(value);
+                                  if (price != null) {
+                                    _treatmentPrices[customId] = price;
+                                  }
+                                },
+                              );
                             },
                           ),
                         ),
@@ -745,23 +750,28 @@ class _ArticleFormDialogState extends ConsumerState<ArticleFormDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Prix (DT)',
-                  border: OutlineInputBorder(),
-                  suffixText: 'DT',
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Le prix est requis';
-                  }
-                  final price = double.tryParse(value);
-                  if (price == null || price < 0) {
-                    return 'Prix invalide';
-                  }
-                  return null;
+              Consumer(
+                builder: (context, ref, _) {
+                  final currencyService = ref.watch(currencyServiceProvider);
+                  return TextFormField(
+                    controller: priceController,
+                    decoration: InputDecoration(
+                      labelText: 'Prix',
+                      border: const OutlineInputBorder(),
+                      suffixText: currencyService.getCurrencySymbol(),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Le prix est requis';
+                      }
+                      final price = double.tryParse(value);
+                      if (price == null || price < 0) {
+                        return 'Prix invalide';
+                      }
+                      return null;
+                    },
+                  );
                 },
               ),
             ],

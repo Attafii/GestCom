@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'dart:io';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../core/services/excel_export_service.dart';
+import '../../../../core/providers/currency_provider.dart';
 import '../../../../data/models/article_model.dart';
 import '../../../../data/models/client_model.dart';
 import '../../../../data/models/treatment_model.dart';
@@ -22,6 +25,7 @@ class ArticleScreen extends ConsumerStatefulWidget {
 
 class _ArticleScreenState extends ConsumerState<ArticleScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final Map<int, double> _rowHeights = {};
 
   @override
   void dispose() {
@@ -144,15 +148,17 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
           color: AppColors.primary,
         ),
         const SizedBox(width: 12),
-        Text(
-          'Gestion des Articles',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-            fontSize: responsive.headerFontSize,
+        Expanded(
+          child: Text(
+            'Gestion des Articles',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              fontSize: responsive.headerFontSize,
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 12),
         ElevatedButton.icon(
           onPressed: () => _showArticleDialog(context),
           icon: Icon(Icons.add, size: responsive.iconSize),
@@ -177,105 +183,127 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
   }
 
   Widget _buildSearchAndFilters(BuildContext context, ResponsiveUtils responsive, bool? activeFilter, String? clientFilter, List<Client> clients) {
+    final searchField = TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        hintText: 'Rechercher par référence ou désignation...',
+        prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                onPressed: () {
+                  _searchController.clear();
+                  ref.read(articleSearchQueryProvider.notifier).clear();
+                },
+                icon: Icon(Icons.clear, color: AppColors.textSecondary),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.primary),
+        ),
+        filled: true,
+        fillColor: AppColors.surface,
+      ),
+      onChanged: (value) {
+        ref.read(articleSearchQueryProvider.notifier).updateQuery(value);
+      },
+    );
+
+    final statusFilter = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.divider),
+        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface,
+      ),
+      child: DropdownButton<bool?>(
+        value: activeFilter,
+        hint: const Text('Statut'),
+        underline: const SizedBox(),
+        isExpanded: true,
+        items: const [
+          DropdownMenuItem<bool?>(
+            value: null,
+            child: Text('Tous'),
+          ),
+          DropdownMenuItem<bool?>(
+            value: true,
+            child: Text('Actifs'),
+          ),
+          DropdownMenuItem<bool?>(
+            value: false,
+            child: Text('Inactifs'),
+          ),
+        ],
+        onChanged: (value) {
+          ref.read(articleActiveFilterProvider.notifier).setFilter(value);
+        },
+      ),
+    );
+
+    final clientFilterWidget = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.divider),
+        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface,
+      ),
+      child: DropdownButton<String?>(
+        value: clientFilter,
+        hint: const Text('Client'),
+        underline: const SizedBox(),
+        isExpanded: true,
+        items: [
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('Tous les clients'),
+          ),
+          const DropdownMenuItem<String?>(
+            value: 'general',
+            child: Text('Articles généraux'),
+          ),
+          ...clients.map((client) => DropdownMenuItem<String?>(
+            value: client.id,
+            child: Text(client.name),
+          )),
+        ],
+        onChanged: (value) {
+          ref.read(articleClientFilterProvider.notifier).setFilter(value);
+        },
+      ),
+    );
+
+    if (responsive.isMobile) {
+      return Column(
+        children: [
+          searchField,
+          SizedBox(height: responsive.smallSpacing),
+          statusFilter,
+          SizedBox(height: responsive.smallSpacing),
+          clientFilterWidget,
+        ],
+      );
+    }
+
     return Row(
       children: [
         Expanded(
           flex: 2,
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Rechercher par référence ou désignation...',
-              prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      onPressed: () {
-                        _searchController.clear();
-                        ref.read(articleSearchQueryProvider.notifier).clear();
-                      },
-                      icon: Icon(Icons.clear, color: AppColors.textSecondary),
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.divider),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.primary),
-              ),
-              filled: true,
-              fillColor: AppColors.surface,
-            ),
-            onChanged: (value) {
-              ref.read(articleSearchQueryProvider.notifier).updateQuery(value);
-            },
-          ),
+          child: searchField,
         ),
         const SizedBox(width: 16),
-        
-        // Active status filter
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.divider),
-            borderRadius: BorderRadius.circular(8),
-            color: AppColors.surface,
-          ),
-          child: DropdownButton<bool?>(
-            value: activeFilter,
-            hint: const Text('Statut'),
-            underline: const SizedBox(),
-            items: const [
-              DropdownMenuItem<bool?>(
-                value: null,
-                child: Text('Tous'),
-              ),
-              DropdownMenuItem<bool?>(
-                value: true,
-                child: Text('Actifs'),
-              ),
-              DropdownMenuItem<bool?>(
-                value: false,
-                child: Text('Inactifs'),
-              ),
-            ],
-            onChanged: (value) {
-              ref.read(articleActiveFilterProvider.notifier).setFilter(value);
-            },
-          ),
+        SizedBox(
+          width: 140,
+          child: statusFilter,
         ),
         const SizedBox(width: 16),
-        
-        // Client filter
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.divider),
-            borderRadius: BorderRadius.circular(8),
-            color: AppColors.surface,
-          ),
-          child: DropdownButton<String?>(
-            value: clientFilter,
-            hint: const Text('Client'),
-            underline: const SizedBox(),
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('Tous les clients'),
-              ),
-              const DropdownMenuItem<String?>(
-                value: 'general',
-                child: Text('Articles généraux'),
-              ),
-              ...clients.map((client) => DropdownMenuItem<String?>(
-                value: client.id,
-                child: Text(client.name),
-              )),
-            ],
-            onChanged: (value) {
-              ref.read(articleClientFilterProvider.notifier).setFilter(value);
-            },
-          ),
+        SizedBox(
+          width: 180,
+          child: clientFilterWidget,
         ),
       ],
     );
@@ -364,6 +392,7 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
       columnSpacing: 12,
       horizontalMargin: 12,
       minWidth: 1000,
+      dataRowHeight: null,
       headingRowColor: MaterialStateProperty.all(AppColors.tableHeader),
       dataRowColor: MaterialStateProperty.resolveWith((states) {
         if (states.contains(MaterialState.selected)) {
@@ -371,35 +400,43 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
         }
         return null;
       }),
-      columns: const [
-        DataColumn2(
+      columns: [
+        const DataColumn2(
           label: Text('Référence', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.M,
         ),
-        DataColumn2(
+        const DataColumn2(
           label: Text('Désignation', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.L,
         ),
-        DataColumn2(
+        const DataColumn2(
           label: Text('Client', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.M,
         ),
         DataColumn2(
-          label: Text('Traitements', style: TextStyle(fontWeight: FontWeight.bold)),
+          label: const Text('Traitements', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.L,
+          fixedWidth: responsive.isMobile ? 250 : 350,
         ),
-        DataColumn2(
+        const DataColumn2(
           label: Text('Statut', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.S,
         ),
-        DataColumn2(
+        const DataColumn2(
           label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold)),
           size: ColumnSize.M,
           fixedWidth: 140,
         ),
       ],
-      rows: articles.map((article) {
+      rows: articles.asMap().entries.map((entry) {
+        final index = entry.key;
+        final article = entry.value;
+        final minHeight = 48.0;
+        final currentHeight = _rowHeights[index] ?? minHeight;
+        
         return DataRow2(
+          onSelectChanged: (_) {},
+          specificRowHeight: currentHeight,
           cells: [
             DataCell(
               Text(
@@ -410,25 +447,65 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
             DataCell(
               Text(
                 article.designation,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
               ),
             ),
             DataCell(
               _buildClientCell(article, clients),
             ),
             DataCell(
-              _buildTreatmentsList(article, treatments),
+              ClipRect(
+                child: SizedBox(
+                  width: responsive.isMobile ? 240 : 340,
+                  child: _buildTreatmentsList(article, treatments, responsive),
+                ),
+              ),
             ),
             DataCell(
               _buildStatusChip(article.isActive),
             ),
             DataCell(
-              _buildActionButtons(context, article),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionButtons(context, article),
+                  if (index < articles.length - 1)
+                    Expanded(child: SizedBox()),
+                  if (index < articles.length - 1)
+                    _buildRowResizeHandle(index, minHeight),
+                ],
+              ),
             ),
           ],
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildRowResizeHandle(int rowIndex, double minHeight) {
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        setState(() {
+          final currentHeight = _rowHeights[rowIndex] ?? minHeight;
+          final newHeight = (currentHeight + details.delta.dy).clamp(minHeight, 300.0);
+          _rowHeights[rowIndex] = newHeight;
+        });
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeRow,
+        child: Container(
+          height: 8,
+          width: double.infinity,
+          color: Colors.transparent,
+          child: Center(
+            child: Container(
+              height: 2,
+              color: Colors.grey.withOpacity(0.3),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -471,19 +548,23 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     }
   }
 
-  Widget _buildTreatmentsList(Article article, List<Treatment> treatments) {
+  Widget _buildTreatmentsList(Article article, List<Treatment> treatments, ResponsiveUtils responsive) {
     if (article.traitementPrix.isEmpty) {
       return Text(
         'Aucun traitement',
         style: TextStyle(
           color: AppColors.textSecondary,
           fontStyle: FontStyle.italic,
+          fontSize: responsive.isMobile ? 10 : 12,
         ),
       );
     }
 
+    final currencyService = ref.watch(currencyServiceProvider);
     final treatmentWidgets = <Widget>[];
+    
     for (final treatmentId in article.treatmentIds) {
+      
       String treatmentName;
       
       // Check if it's a custom treatment (starts with 'custom_')
@@ -509,17 +590,23 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
 
       treatmentWidgets.add(
         Container(
-          margin: const EdgeInsets.only(right: 4, bottom: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          margin: EdgeInsets.only(
+            right: responsive.isMobile ? 2 : 4,
+            bottom: responsive.isMobile ? 2 : 3,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: responsive.isMobile ? 4 : 6,
+            vertical: responsive.isMobile ? 1 : 2,
+          ),
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(responsive.isMobile ? 3 : 4),
             border: Border.all(color: AppColors.primary.withOpacity(0.3)),
           ),
           child: Text(
-            '$treatmentName: ${price.toStringAsFixed(2)} DT',
+            '$treatmentName: ${currencyService.formatPrice(price)}',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: responsive.isMobile ? 9 : 11,
               color: AppColors.primary,
               fontWeight: FontWeight.w500,
             ),
@@ -529,6 +616,8 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     }
 
     return Wrap(
+      spacing: responsive.isMobile ? 2 : 4,
+      runSpacing: responsive.isMobile ? 2 : 3,
       children: treatmentWidgets,
     );
   }
@@ -566,18 +655,26 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
           ),
           tooltip: article.isActive ? 'Désactiver' : 'Activer',
           iconSize: 20,
+          padding: EdgeInsets.all(8),
+          constraints: BoxConstraints(),
         ),
+        const SizedBox(width: 4),
         IconButton(
           onPressed: () => _showArticleDialog(context, article: article),
           icon: Icon(Icons.edit, color: AppColors.primary),
           tooltip: AppStrings.edit,
           iconSize: 20,
+          padding: EdgeInsets.all(8),
+          constraints: BoxConstraints(),
         ),
+        const SizedBox(width: 4),
         IconButton(
           onPressed: () => _deleteArticle(context, article),
           icon: Icon(Icons.delete, color: AppColors.error),
           tooltip: AppStrings.delete,
           iconSize: 20,
+          padding: EdgeInsets.all(8),
+          constraints: BoxConstraints(),
         ),
       ],
     );
@@ -664,13 +761,102 @@ class _ArticleScreenState extends ConsumerState<ArticleScreen> {
     );
   }
 
-  void _exportArticles() {
-    // TODO: Implement Excel export
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Export Excel en cours de développement...'),
-        backgroundColor: AppColors.info,
-      ),
-    );
+  void _exportArticles() async {
+    final articles = ref.read(articleListProvider);
+    
+    if (articles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aucun article à exporter'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Export to Excel
+      final excelService = ExcelExportService();
+      final file = await excelService.exportArticles(articles);
+
+      // Close loading
+      if (mounted) Navigator.of(context).pop();
+
+      // Show success dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: AppColors.success),
+                SizedBox(width: 8),
+                Text('Export Réussi'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${articles.length} article(s) exporté(s) avec succès.'),
+                const SizedBox(height: 12),
+                Text(
+                  'Emplacement:\n${file.path}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Fermer'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  try {
+                    await Process.run('start', ['', file.path], runInShell: true);
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erreur lors de l\'ouverture: $e'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Ouvrir'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading if open
+      if (mounted) Navigator.of(context).pop();
+      
+      // Show error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 }

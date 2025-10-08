@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/services/pdf_invoice_service.dart';
+import '../../../../core/providers/currency_provider.dart';
 import '../../../client/application/client_providers.dart';
 import '../../application/facturation_providers.dart';
 import '../widgets/facturation_form_dialog.dart';
@@ -30,6 +32,7 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final responsive = context.responsive;
     final filteredInvoices = ref.watch(filteredInvoicesProvider);
     final statistics = ref.watch(facturationStatisticsProvider);
     final clients = ref.watch(clientListProvider);
@@ -40,165 +43,10 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
       body: Column(
         children: [
           // Header with statistics
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.receipt_long,
-                      size: 32,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Facturation',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: () => _showFacturationDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Nouvelle facture'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildStatisticsCards(statistics),
-              ],
-            ),
-          ),
+          _buildHeaderWithStats(responsive, context, statistics),
 
           // Filters and search
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey.shade50,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Search
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Rechercher par numéro, BL ou commentaires...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        onChanged: (value) {
-                          ref.read(facturationSearchQueryProvider.notifier)
-                              .updateQuery(value);
-                        },
-                      ),
-                    ),
-                    
-                    const SizedBox(width: 16),
-                    
-                    // Client filter
-                    Expanded(
-                      child: DropdownButtonFormField<String?>(
-                        value: selectedClient,
-                        decoration: InputDecoration(
-                          labelText: 'Filtrer par client',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Tous les clients'),
-                          ),
-                          ...clients.map((client) => DropdownMenuItem<String?>(
-                            value: client.id,
-                            child: Text(client.name),
-                          )),
-                        ],
-                        onChanged: (value) {
-                          ref.read(selectedFacturationClientProvider.notifier)
-                              .selectClient(value);
-                        },
-                      ),
-                    ),
-                    
-                    const SizedBox(width: 16),
-                    
-                    // Status filter
-                    SizedBox(
-                      width: 180,
-                      child: DropdownButtonFormField<String?>(
-                        value: selectedStatus,
-                        decoration: InputDecoration(
-                          labelText: 'Statut',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        items: const [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Tous'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'brouillon',
-                            child: Text('Brouillon'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'valide',
-                            child: Text('Validée'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'envoye',
-                            child: Text('Envoyée'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'paye',
-                            child: Text('Payée'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'annule',
-                            child: Text('Annulée'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          ref.read(selectedFacturationStatusProvider.notifier)
-                              .selectStatus(value);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildFiltersSection(responsive, clients, selectedClient, selectedStatus),
 
           // Data table
           Expanded(
@@ -246,60 +94,376 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
     );
   }
 
-  Widget _buildStatisticsCards(Map<String, dynamic> stats) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            'Total factures',
-            '${stats['totalInvoices'] ?? 0}',
-            Icons.receipt_long,
-            Colors.blue,
+  Widget _buildHeaderWithStats(ResponsiveUtils responsive, BuildContext context, Map<String, dynamic> statistics) {
+    return Container(
+      padding: EdgeInsets.all(responsive.isMobile ? 16 : 24),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'En attente',
-            '${stats['pendingInvoices'] ?? 0}',
-            Icons.hourglass_empty,
-            Colors.orange,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Payées',
-            '${stats['paidInvoices'] ?? 0}',
-            Icons.check_circle,
-            Colors.green,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Montant total',
-            '${(stats['totalAmount'] ?? 0.0).toStringAsFixed(3)} DT',
-            Icons.euro,
-            Colors.purple,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'BL en attente',
-            '${stats['pendingBLs'] ?? 0}',
-            Icons.local_shipping,
-            Colors.red,
-          ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        children: [
+          if (responsive.isMobile)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      size: responsive.iconSize + 8,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Facturation',
+                        style: TextStyle(
+                          fontSize: responsive.headerFontSize,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: responsive.spacing / 2),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showFacturationDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nouvelle facture'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primary,
+                      minimumSize: Size(0, responsive.buttonHeight),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Icon(
+                  Icons.receipt_long,
+                  size: responsive.iconSize + 8,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Facturation',
+                  style: TextStyle(
+                    fontSize: responsive.headerFontSize,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () => _showFacturationDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Nouvelle facture'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                    minimumSize: Size(0, responsive.buttonHeight),
+                  ),
+                ),
+              ],
+            ),
+          SizedBox(height: responsive.spacing),
+          _buildStatisticsCards(responsive, statistics),
+        ],
+      ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildFiltersSection(ResponsiveUtils responsive, List<Client> clients, String? selectedClient, String? selectedStatus) {
+    if (responsive.isMobile) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        color: Colors.grey.shade50,
+        child: Column(
+          children: [
+            // Search
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Rechercher...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                isDense: true,
+              ),
+              onChanged: (value) {
+                ref.read(facturationSearchQueryProvider.notifier)
+                    .updateQuery(value);
+              },
+            ),
+            const SizedBox(height: 12),
+            // Client filter
+            DropdownButtonFormField<String?>(
+              value: selectedClient,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Filtrer par client',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Tous les clients'),
+                ),
+                ...clients.map((client) => DropdownMenuItem<String?>(
+                  value: client.id,
+                  child: Text(client.name),
+                )),
+              ],
+              onChanged: (value) {
+                ref.read(selectedFacturationClientProvider.notifier)
+                    .selectClient(value);
+              },
+            ),
+            const SizedBox(height: 12),
+            // Status filter
+            DropdownButtonFormField<String?>(
+              value: selectedStatus,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Statut',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                isDense: true,
+              ),
+              items: const [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Tous'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'brouillon',
+                  child: Text('Brouillon'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'valide',
+                  child: Text('Validée'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'envoye',
+                  child: Text('Envoyée'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'paye',
+                  child: Text('Payée'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'annule',
+                  child: Text('Annulée'),
+                ),
+              ],
+              onChanged: (value) {
+                ref.read(selectedFacturationStatusProvider.notifier)
+                    .selectStatus(value);
+              },
+            ),
+          ],
+        ),
+      );
+    }
+    
     return Container(
       padding: const EdgeInsets.all(16),
+      color: Colors.grey.shade50,
+      child: Row(
+        children: [
+          // Search
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Rechercher par numéro, BL ou commentaires...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onChanged: (value) {
+                ref.read(facturationSearchQueryProvider.notifier)
+                    .updateQuery(value);
+              },
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Client filter
+          Expanded(
+            child: DropdownButtonFormField<String?>(
+              value: selectedClient,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Filtrer par client',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Tous les clients'),
+                ),
+                ...clients.map((client) => DropdownMenuItem<String?>(
+                  value: client.id,
+                  child: Text(client.name),
+                )),
+              ],
+              onChanged: (value) {
+                ref.read(selectedFacturationClientProvider.notifier)
+                    .selectClient(value);
+              },
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Status filter
+          SizedBox(
+            width: 180,
+            child: DropdownButtonFormField<String?>(
+              value: selectedStatus,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Statut',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              items: const [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Tous'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'brouillon',
+                  child: Text('Brouillon'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'valide',
+                  child: Text('Validée'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'envoye',
+                  child: Text('Envoyée'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'paye',
+                  child: Text('Payée'),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'annule',
+                  child: Text('Annulée'),
+                ),
+              ],
+              onChanged: (value) {
+                ref.read(selectedFacturationStatusProvider.notifier)
+                    .selectStatus(value);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatisticsCards(ResponsiveUtils responsive, Map<String, dynamic> stats) {
+    final currencyService = ref.watch(currencyServiceProvider);
+    
+    final cards = [
+      _buildStatCard(
+        responsive,
+        'Total factures',
+        '${stats['totalInvoices'] ?? 0}',
+        Icons.receipt_long,
+        Colors.blue,
+      ),
+      _buildStatCard(
+        responsive,
+        'En attente',
+        '${stats['pendingInvoices'] ?? 0}',
+        Icons.hourglass_empty,
+        Colors.orange,
+      ),
+      _buildStatCard(
+        responsive,
+        'Payées',
+        '${stats['paidInvoices'] ?? 0}',
+        Icons.check_circle,
+        Colors.green,
+      ),
+      _buildStatCard(
+        responsive,
+        'Montant total',
+        currencyService.formatPrice(stats['totalAmount'] ?? 0.0),
+        Icons.euro,
+        Colors.purple,
+      ),
+      _buildStatCard(
+        responsive,
+        'BL en attente',
+        '${stats['pendingBLs'] ?? 0}',
+        Icons.local_shipping,
+        Colors.red,
+      ),
+    ];
+    
+    if (responsive.isMobile) {
+      return Column(
+        children: cards.map((card) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: card,
+        )).toList(),
+      );
+    }
+    
+    return Row(
+      children: cards.map((card) => Expanded(
+        child: Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: card,
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _buildStatCard(ResponsiveUtils responsive, String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: EdgeInsets.all(responsive.isMobile ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -315,13 +479,13 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 24),
+              Icon(icon, color: color, size: responsive.iconSize),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontSize: responsive.isMobile ? 11 : 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -333,8 +497,8 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
             alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 18,
+              style: TextStyle(
+                fontSize: responsive.isMobile ? 16 : 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -377,10 +541,13 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
   }
 
   Widget _buildInvoicesTable(List<Facturation> invoices, List<Client> clients) {
+    final currencyService = ref.watch(currencyServiceProvider);
+    
     return DataTable2(
       columnSpacing: 12,
       horizontalMargin: 12,
       minWidth: 1000,
+      dataRowHeight: null,
       columns: [
         DataColumn2(
           label: Text('N° Facture'),
@@ -471,7 +638,7 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
             ),
             DataCell(
               Text(
-                '${invoice.totalAmount.toStringAsFixed(3)} DT',
+                currencyService.formatPrice(invoice.totalAmount),
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
@@ -536,39 +703,57 @@ class _FacturationScreenState extends ConsumerState<FacturationScreen> {
           icon: const Icon(Icons.picture_as_pdf, size: 18),
           onPressed: () => _generatePdf(invoice),
           tooltip: 'Générer PDF',
+          padding: EdgeInsets.all(8),
+          constraints: BoxConstraints(),
         ),
         
         // Edit button (only for draft invoices)
-        if (invoice.isEditable)
+        if (invoice.isEditable) ...[
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.edit, size: 18),
             onPressed: () => _showFacturationDialog(invoice.id),
             tooltip: 'Modifier',
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
+        ],
         
         // Mark as paid button (for validated/sent invoices)
-        if (['valide', 'envoye'].contains(invoice.status))
+        if (['valide', 'envoye'].contains(invoice.status)) ...[
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.payment, size: 18),
             onPressed: () => _markAsPaid(invoice),
             tooltip: 'Marquer comme payée',
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
+        ],
         
         // Cancel button (for non-paid invoices)
-        if (!invoice.isPaid && !invoice.isCancelled)
+        if (!invoice.isPaid && !invoice.isCancelled) ...[
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.cancel, size: 18),
             onPressed: () => _cancelInvoice(invoice),
             tooltip: 'Annuler',
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
+        ],
         
         // Delete button (only for draft invoices)
-        if (invoice.isEditable)
+        if (invoice.isEditable) ...[
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.delete, size: 18),
             onPressed: () => _deleteInvoice(invoice),
             tooltip: 'Supprimer',
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
+        ],
       ],
     );
   }

@@ -11,12 +11,14 @@ class TaskListCard extends ConsumerWidget {
     this.onTap,
     this.onEdit,
     this.onDelete,
+    this.onToggleComplete,
   });
 
   final Task task;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onToggleComplete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,7 +68,7 @@ class TaskListCard extends ConsumerWidget {
         leading: Checkbox(
           value: task.isCompleted,
           onChanged: (value) {
-            // TODO: Implement task completion toggle
+            onToggleComplete?.call();
           },
         ),
         trailing: PopupMenuButton<String>(

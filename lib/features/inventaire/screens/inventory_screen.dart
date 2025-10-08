@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
+import '../../../core/utils/responsive_utils.dart';
 import '../providers/inventory_providers.dart';
 import '../dialogs/inventory_filter_dialog.dart';
 import '../dialogs/article_history_dialog.dart';
@@ -91,48 +92,7 @@ class InventoryScreen extends ConsumerWidget {
       body: Column(
         children: [
           // Statistics cards
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    title: 'Articles Total',
-                    value: statistics.totalStockItems.toString(),
-                    icon: Icons.inventory_2,
-                    color: Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatCard(
-                    title: 'En Stock',
-                    value: statistics.itemsWithStock.toString(),
-                    icon: Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatCard(
-                    title: 'Rupture',
-                    value: statistics.itemsWithoutStock.toString(),
-                    icon: Icons.warning,
-                    color: Colors.orange,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatCard(
-                    title: 'Clients',
-                    value: statistics.totalClients.toString(),
-                    icon: Icons.people,
-                    color: Colors.purple,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildStatisticsCards(context, statistics),
 
           // Search and filter bar
           Container(
@@ -235,10 +195,70 @@ class InventoryScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildStatisticsCards(BuildContext context, dynamic statistics) {
+    final responsive = context.responsive;
+    
+    final cards = [
+      _StatCard(
+        responsive: responsive,
+        title: 'Articles Total',
+        value: statistics.totalStockItems.toString(),
+        icon: Icons.inventory_2,
+        color: Colors.blue,
+      ),
+      _StatCard(
+        responsive: responsive,
+        title: 'En Stock',
+        value: statistics.itemsWithStock.toString(),
+        icon: Icons.check_circle,
+        color: Colors.green,
+      ),
+      _StatCard(
+        responsive: responsive,
+        title: 'Rupture',
+        value: statistics.itemsWithoutStock.toString(),
+        icon: Icons.warning,
+        color: Colors.orange,
+      ),
+      _StatCard(
+        responsive: responsive,
+        title: 'Clients',
+        value: statistics.totalClients.toString(),
+        icon: Icons.people,
+        color: Colors.purple,
+      ),
+    ];
+    
+    if (responsive.isMobile) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: cards.map((card) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: card,
+          )).toList(),
+        ),
+      );
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: cards.map((card) => Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: card,
+          ),
+        )).toList(),
+      ),
+    );
+  }
+
   Widget _buildTableView(List items, WidgetRef ref) {
     return DataTable2(
       columnSpacing: 12,
       horizontalMargin: 16,
+      dataRowHeight: null,
       headingRowColor: MaterialStateColor.resolveWith((states) => Colors.grey.shade100),
       columns: [
         DataColumn2(
@@ -501,12 +521,14 @@ class InventoryScreen extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
+  final ResponsiveUtils responsive;
   final String title;
   final String value;
   final IconData icon;
   final Color color;
 
   const _StatCard({
+    required this.responsive,
     required this.title,
     required this.value,
     required this.icon,
@@ -517,18 +539,18 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(responsive.isMobile ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: color, size: 24),
+                Icon(icon, color: color, size: responsive.iconSize),
                 const Spacer(),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: responsive.isMobile ? 20 : 24,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -538,7 +560,8 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: TextStyle(
+                fontSize: responsive.isMobile ? 12 : 14,
                 color: Colors.grey.shade600,
               ),
             ),

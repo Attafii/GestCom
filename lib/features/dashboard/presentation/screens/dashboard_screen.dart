@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/providers/currency_provider.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../data/models/client_model.dart';
 import '../../../../data/models/bon_reception_model.dart';
 import '../../../client/application/client_providers.dart';
@@ -17,6 +18,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final responsive = context.responsive;
     final dashboardStats = ref.watch(dashboardStatisticsProvider);
     final recentActivitiesList = ref.watch(recentActivitiesProvider);
     final topClientsList = ref.watch(topClientsProvider);
@@ -31,59 +33,77 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: responsive.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             _buildHeader(context),
-            const SizedBox(height: 32),
+            SizedBox(height: responsive.spacing),
 
-            // Statistics Cards Row
-            _buildStatsCards(clients, receptions, articles, receptionStats),
-            const SizedBox(height: 24),
+            // Statistics Cards
+            _buildStatsCards(context, clients, receptions, articles, receptionStats),
+            SizedBox(height: responsive.spacing),
 
-            // Charts and Analytics Row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left Column - Charts
-                Expanded(
-                  flex: 2,
-                  child: Column(
+            // Charts and Analytics - Responsive Layout
+            responsive.isMobile
+                ? Column(
                     children: [
                       _buildPaymentStatusChart(receptionStats),
-                      const SizedBox(height: 16),
+                      SizedBox(height: responsive.smallSpacing),
                       _buildPaymentModeChart(receptionStats),
+                      SizedBox(height: responsive.smallSpacing),
+                      _buildSalesTrendChart(receptions),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left Column - Charts
+                      Expanded(
+                        flex: responsive.isTablet ? 1 : 2,
+                        child: Column(
+                          children: [
+                            _buildPaymentStatusChart(receptionStats),
+                            SizedBox(height: responsive.smallSpacing),
+                            _buildPaymentModeChart(receptionStats),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: responsive.smallSpacing),
+                      // Right Column - Sales Trend
+                      Expanded(
+                        flex: responsive.isTablet ? 1 : 3,
+                        child: _buildSalesTrendChart(receptions),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                // Right Column - Sales Trend
-                Expanded(
-                  flex: 3,
-                  child: _buildSalesTrendChart(receptions),
-                ),
-              ],
-            ),
 
-            const SizedBox(height: 24),
+            SizedBox(height: responsive.spacing),
 
-            // Bottom Row - Tables
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Clients
-                Expanded(
-                  child: _buildTopClientsTable(clients, receptions),
-                ),
-                const SizedBox(width: 16),
-                // Recent Receptions
-                Expanded(
-                  child: _buildRecentReceptionsTable(receptions, clients),
-                ),
-              ],
-            ),
+            // Bottom Row - Tables - Responsive Layout
+            responsive.isMobile
+                ? Column(
+                    children: [
+                      _buildTopClientsTable(clients, receptions),
+                      SizedBox(height: responsive.smallSpacing),
+                      _buildRecentReceptionsTable(receptions, clients),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top Clients
+                      Expanded(
+                        child: _buildTopClientsTable(clients, receptions),
+                      ),
+                      SizedBox(width: responsive.smallSpacing),
+                      // Recent Receptions
+                      Expanded(
+                        child: _buildRecentReceptionsTable(receptions, clients),
+                      ),
+                    ],
+                  ),
           ],
         ),
       ),
@@ -119,6 +139,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildStatsCards(
+    BuildContext context,
     List<Client> clients,
     List<BonReception> receptions,
     List articles,
@@ -126,6 +147,7 @@ class DashboardScreen extends ConsumerWidget {
   ) {
     return Consumer(
       builder: (context, ref, child) {
+        final responsive = context.responsive;
         final stats = ref.watch(dashboardStatisticsProvider);
         final currencyService = ref.watch(currencyServiceProvider);
         final currencySymbol = ref.watch(currencySymbolProvider);
@@ -148,69 +170,87 @@ class DashboardScreen extends ConsumerWidget {
             ? ((pendingLivraisons / totalLivraisons) * 100).toInt() 
             : 0;
 
-        return Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                title: 'CA Factures',
-                value: currencyService.formatPrice(totalCA),
-                subtitle: '${stats['currentMonthFactures']} factures ce mois',
-                icon: Icons.euro,
-                color: const Color(0xFF6366F1),
-                percentage: caPercentage,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Total Réceptions',
-                value: currencyService.formatPrice(totalReceptionAmount),
-                subtitle: '${stats['currentMonthReceptions']} ce mois',
-                icon: Icons.receipt,
-                color: const Color(0xFF8B5CF6),
-                percentage: receptionPercentage,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Livraisons',
-                value: '${totalLivraisons} BL',
-                subtitle: '$pendingLivraisons en attente',
-                icon: Icons.local_shipping,
-                color: const Color(0xFFEC4899),
-                percentage: livraisonPercentage,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Total Payé',
-                value: currencyService.formatPrice(totalPaid),
-                subtitle: '${stats['paidFactures']} factures',
-                icon: Icons.payments,
-                color: const Color(0xFF10B981),
-                percentage: paidPercentage,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Total Impayé',
-                value: currencyService.formatPrice(totalUnpaid),
-                subtitle: '${stats['unpaidFactures']} factures',
-                icon: Icons.money_off,
-                color: const Color(0xFFF59E0B),
-                percentage: unpaidPercentage,
-              ),
-            ),
-          ],
-        );
+        final cards = [
+          _buildStatCard(
+            context,
+            title: 'CA Factures',
+            value: currencyService.formatPrice(totalCA),
+            subtitle: '${stats['currentMonthFactures']} factures ce mois',
+            icon: Icons.euro,
+            color: const Color(0xFF6366F1),
+            percentage: caPercentage,
+          ),
+          _buildStatCard(
+            context,
+            title: 'Total Réceptions',
+            value: currencyService.formatPrice(totalReceptionAmount),
+            subtitle: '${stats['currentMonthReceptions']} ce mois',
+            icon: Icons.receipt,
+            color: const Color(0xFF8B5CF6),
+            percentage: receptionPercentage,
+          ),
+          _buildStatCard(
+            context,
+            title: 'Livraisons',
+            value: '${totalLivraisons} BL',
+            subtitle: '$pendingLivraisons en attente',
+            icon: Icons.local_shipping,
+            color: const Color(0xFFEC4899),
+            percentage: livraisonPercentage,
+          ),
+          _buildStatCard(
+            context,
+            title: 'Total Payé',
+            value: currencyService.formatPrice(totalPaid),
+            subtitle: '${stats['paidFactures']} factures',
+            icon: Icons.payments,
+            color: const Color(0xFF10B981),
+            percentage: paidPercentage,
+          ),
+          _buildStatCard(
+            context,
+            title: 'Total Impayé',
+            value: currencyService.formatPrice(totalUnpaid),
+            subtitle: '${stats['unpaidFactures']} factures',
+            icon: Icons.money_off,
+            color: const Color(0xFFF59E0B),
+            percentage: unpaidPercentage,
+          ),
+        ];
+
+        // Responsive layout for cards
+        if (responsive.isMobile) {
+          return Column(
+            children: cards.map((card) => Padding(
+              padding: EdgeInsets.only(bottom: responsive.smallSpacing),
+              child: card,
+            )).toList(),
+          );
+        } else if (responsive.isTablet) {
+          return Wrap(
+            spacing: responsive.smallSpacing,
+            runSpacing: responsive.smallSpacing,
+            children: cards.map((card) => SizedBox(
+              width: (MediaQuery.of(context).size.width - responsive.horizontalPadding * 2 - responsive.smallSpacing) / 2,
+              child: card,
+            )).toList(),
+          );
+        } else {
+          return Row(
+            children: cards.map((card) => 
+              Expanded(child: Padding(
+                padding: EdgeInsets.only(right: responsive.smallSpacing),
+                child: card,
+              ))
+            ).toList(),
+          );
+        }
       },
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildStatCard(
+    BuildContext context, {
     required String title,
     required String value,
     required String subtitle,
@@ -218,8 +258,10 @@ class DashboardScreen extends ConsumerWidget {
     required Color color,
     required int percentage,
   }) {
+    final responsive = context.responsive;
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(responsive.isMobile ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -243,7 +285,7 @@ class DashboardScreen extends ConsumerWidget {
                   color: color,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: Colors.white, size: 20),
+                child: Icon(icon, color: Colors.white, size: responsive.iconSize),
               ),
               const Spacer(),
               Text(
@@ -256,11 +298,11 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: responsive.smallSpacing),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(
+              fontSize: responsive.isMobile ? 20 : 24,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
@@ -269,7 +311,7 @@ class DashboardScreen extends ConsumerWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: responsive.bodyFontSize,
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
@@ -521,18 +563,18 @@ class DashboardScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: const [
-              Text('janv', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('févr', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('mars', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('avr', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('mai', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('juin', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('juil', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('août', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('sept', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('oct', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('nov', style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('déc', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Flexible(child: Text('janv', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('févr', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('mars', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('avr', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('mai', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('juin', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('juil', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('août', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('sept', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('oct', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('nov', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+              Flexible(child: Text('déc', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
             ],
           ),
         ],

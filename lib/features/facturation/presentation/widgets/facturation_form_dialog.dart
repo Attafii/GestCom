@@ -4,6 +4,7 @@ import 'package:data_table_2/data_table_2.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/providers/currency_provider.dart';
 import '../../../client/application/client_providers.dart';
 import '../../../livraison/application/bon_livraison_providers.dart';
 import '../../application/facturation_providers.dart';
@@ -356,6 +357,7 @@ class _FacturationFormDialogState extends ConsumerState<FacturationFormDialog> {
       return const SizedBox.shrink();
     }
 
+    final currencyService = ref.watch(currencyServiceProvider);
     final repository = ref.read(facturationRepositoryProvider);
     final total = repository.calculateTotalFromBLs(_selectedBLs.toList());
 
@@ -388,10 +390,10 @@ class _FacturationFormDialogState extends ConsumerState<FacturationFormDialog> {
               children: [
                 Text('Total:'),
                 Text(
-                  '${total.toStringAsFixed(3)} DT',
+                  currencyService.formatPrice(total),
                   style: const TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
                 ),
               ],
